@@ -23,6 +23,19 @@ export interface Note {
   updatedAt: string;
   /** True for the demo notes added on first launch. They can be deleted like any other note. */
   sample?: boolean;
+  /** Pinned notes are listed first in the sidebar. */
+  pinned?: boolean;
+  /** The group (galaxy) this note belongs to. Undefined = no group. */
+  groupId?: string;
+}
+
+/** A user-defined group of notes, drawn as a "galaxy" in the universe. */
+export interface Group {
+  id: string;
+  name: string;
+  /** Galaxy color, e.g. "#8fa8ff". */
+  color: string;
+  createdAt: string;
 }
 
 /**
@@ -53,6 +66,7 @@ export interface UniverseData {
   notes: Note[];
   connections: Connection[];
   layout: Layout;
+  groups: Group[];
 }
 
 /** The fields a user fills in when creating or editing a note. */
@@ -60,4 +74,6 @@ export interface NoteDraft {
   title: string;
   body: string;
   category: CategoryId | null;
+  /** Group id, or null for "no group". */
+  groupId: string | null;
 }

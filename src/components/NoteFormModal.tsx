@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { CATEGORY_LIST } from '../domain/categories';
-import type { CategoryId, Note, NoteDraft } from '../domain/types';
+import { GROUP_NAME_MAX, validateGroupName } from '../domain/groups';
+import type { CategoryId, Group, Note, NoteDraft } from '../domain/types';
 import { LIMITS, validateDraft, type DraftErrors } from '../domain/universe';
 import { ja } from '../i18n/ja';
 import { formatDateTime } from '../utils/format';
@@ -13,11 +14,22 @@ interface NoteFormModalProps {
   note?: Note;
   /** Pre-selected category for new notes (e.g. the active filter). */
   defaultCategory?: CategoryId | null;
-  onSubmit: (values: { title: string; body: string; category: CategoryId }) => void;
+  /** Pre-selected group for new notes. */
+  defaultGroupId?: string | null;
+  groups: Group[];
+  /** `newGroupName` is set when the user chose "create a new group". */
+  onSubmit: (values: {
+    title: string;
+    body: string;
+    category: CategoryId;
+    groupId: string | null;
+    newGroupName?: string;
+  }) => void;
   onClose: () => void;
 }
 
 const t = ja.form;
+const NEW_GROUP = '__new__';
 
 /** Turns validation codes into Japanese messages. */
 function errorText(errors: DraftErrors) {
@@ -33,13 +45,24 @@ function errorText(errors: DraftErrors) {
   };
 }
 
-export function NoteFormModal({ note, defaultCategory = null, onSubmit, onClose }: NoteFormModalProps) {
+export function NoteFormModal({
+  note,
+  defaultCategory = null,
+  defaultGroupId = null,
+  groups,
+  onSubmit,
+  onClose,
+}: NoteFormModalProps) {
   const isEdit = Boolean(note);
   const [draft, setDraft] = useState<NoteDraft>({
     title: note?.title ?? '',
     body: note?.body ?? '',
     category: note?.category ?? defaultCategory,
+    groupId: note ? (note.groupId ?? null) : defaultGroupId,
   });
+  const [groupChoice, setGroupChoice] = useState<string>(draft.groupId ?? '');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupError, setNewGroupError] = useState<string | null>(null);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const messages = errorText(errors);
@@ -55,13 +78,31 @@ export function NoteFormModal({ note, defaultCategory = null, onSubmit, onClose 
     setSubmitted(true);
     const found = validateDraft(draft);
     setErrors(found);
+    const groupProblem = groupChoice === NEW_GROUP ? validateGroupName(newGroupName) : null;
+    setNewGroupError(
+      groupProblem === 'required'
+        ? ja.groupDialog.errors.required
+        : groupProblem === 'tooLong'
+          ? ja.groupDialog.errors.tooLong(GROUP_NAME_MAX)
+          : null,
+    );
+    if (groupProblem && Object.keys(found).length === 0) {
+      document.getElementById('note-new-group')?.focus();
+      return;
+    }
     if (Object.keys(found).length > 0 || !draft.category) {
       // Move focus to the first problem so it's easy to fix.
       const firstField = found.title ? 'note-title' : found.category ? 'note-category-ideas' : 'note-body';
       document.getElementById(firstField)?.focus();
       return;
     }
-    onSubmit({ title: draft.title.trim(), body: draft.body, category: draft.category });
+    onSubmit({
+      title: draft.title.trim(),
+      body: draft.body,
+      category: draft.category,
+      groupId: groupChoice && groupChoice !== NEW_GROUP ? groupChoice : null,
+      ...(groupChoice === NEW_GROUP ? { newGroupName: newGroupName.trim() } : {}),
+    });
   };
 
   // Enter in the title moves on to the next field instead of submitting.
@@ -159,6 +200,51 @@ export function NoteFormModal({ note, defaultCategory = null, onSubmit, onClose 
             </p>
           )}
         </fieldset>
+
+        <div className="field">
+          <label htmlFor="note-group" className="field-label">
+            {t.groupLabel} <span className="optional">{t.optional}</span>
+          </label>
+          <select
+            id="note-group"
+            className="input select"
+            value={groupChoice}
+            onChange={(e) => setGroupChoice(e.target.value)}
+          >
+            <option value="">{t.noGroup}</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+            <option value={NEW_GROUP}>{t.newGroupOption}</option>
+          </select>
+          {groupChoice === NEW_GROUP && (
+            <>
+              <input
+                id="note-new-group"
+                className={`input new-group-input ${newGroupError ? 'has-error' : ''}`}
+                value={newGroupName}
+                maxLength={GROUP_NAME_MAX}
+                placeholder={ja.groupDialog.namePlaceholder}
+                aria-label={ja.groupDialog.nameLabel}
+                autoComplete="off"
+                onChange={(e) => {
+                  setNewGroupName(e.target.value);
+                  if (newGroupError) setNewGroupError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isComposing(e)) e.preventDefault();
+                }}
+              />
+              {newGroupError && (
+                <p className="field-error" role="alert">
+                  {newGroupError}
+                </p>
+              )}
+            </>
+          )}
+        </div>
 
         <div className="field">
           <label htmlFor="note-body" className="field-label">

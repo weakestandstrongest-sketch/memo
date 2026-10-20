@@ -5,7 +5,8 @@
  */
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { createSampleUniverse } from '../domain/sampleData';
-import type { Note, Position, UniverseData } from '../domain/types';
+import { addGroup, buildGroup, deleteGroup, setPinned, updateGroup } from '../domain/groups';
+import type { Group, Note, Position, UniverseData } from '../domain/types';
 import {
   addNote,
   buildNote,
@@ -30,7 +31,11 @@ type Action =
   | { type: 'disconnect'; connectionId: string }
   | { type: 'move'; id: string; position: Position }
   | { type: 'settle'; id: string }
-  | { type: 'replace'; data: UniverseData };
+  | { type: 'replace'; data: UniverseData }
+  | { type: 'add-group'; group: Group }
+  | { type: 'update-group'; id: string; patch: { name?: string; color?: string } }
+  | { type: 'delete-group'; id: string }
+  | { type: 'pin'; id: string; pinned: boolean };
 
 function reducer(state: UniverseData, action: Action): UniverseData {
   switch (action.type) {
@@ -50,6 +55,14 @@ function reducer(state: UniverseData, action: Action): UniverseData {
       return settleNote(state, action.id);
     case 'replace':
       return action.data;
+    case 'add-group':
+      return addGroup(state, action.group);
+    case 'update-group':
+      return updateGroup(state, action.id, action.patch);
+    case 'delete-group':
+      return deleteGroup(state, action.id);
+    case 'pin':
+      return setPinned(state, action.id, action.pinned);
   }
 }
 
@@ -143,6 +156,21 @@ export function useUniverseStore(storage: UniverseStorage = defaultStorage) {
       },
       replaceAll(next: UniverseData) {
         dispatch({ type: 'replace', data: next });
+      },
+      /** Creates a group (galaxy). Returns it so the caller can use its id. */
+      createGroup(name: string, color: string): Group {
+        const group = buildGroup(name, color);
+        dispatch({ type: 'add-group', group });
+        return group;
+      },
+      updateGroup(id: string, patch: { name?: string; color?: string }) {
+        dispatch({ type: 'update-group', id, patch });
+      },
+      deleteGroup(id: string) {
+        dispatch({ type: 'delete-group', id });
+      },
+      setPinned(id: string, pinned: boolean) {
+        dispatch({ type: 'pin', id, pinned });
       },
     }),
     [],

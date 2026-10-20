@@ -931,12 +931,111 @@ p {
 }
 
 .link-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.link-item.is-open {
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.link-chevron {
+  display: grid;
+  margin-left: auto;
+  color: var(--text-faint);
+  transition: transform 0.2s ease;
+}
+
+.link-item.is-open .link-chevron {
+  transform: rotate(90deg);
+}
+
+/* The connected star's memo, shown inline below its row */
+.linked-memo {
+  padding: 2px 14px 12px 40px;
+  animation: fade-in 0.2s ease-out;
+}
+
+.linked-memo-meta {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.linked-memo-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #cdd4f2;
+}
+
+.linked-memo-body.is-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.linked-memo-open {
+  margin-top: 10px;
+}
+
+/* Pin button in the detail header */
+.detail-pin {
+  margin-left: auto;
+}
+
+.detail-pin + .detail-close {
+  margin-left: 0;
+}
+
+.detail-pin.is-pinned,
+.sidebar-pin.is-pinned {
+  color: #ffd166;
+}
+
+.category-badge {
+  flex: none;
+  white-space: nowrap;
+}
+
+.detail-header .badge {
+  flex: none;
+}
+
+.group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 0 1 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--group-color); /* fallback for iOS < 16.2 */
+  border: 1px solid color-mix(in srgb, var(--group-color) 55%, transparent);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--group-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--group-color);
+  box-shadow: 0 0 8px var(--group-color);
 }
 
 .link-open {
@@ -989,6 +1088,375 @@ p {
 
 .is-sheet .detail-actions {
   padding-bottom: calc(var(--safe-bottom) + 12px);
+}
+
+/* ---------- Galaxies (groups) ---------- */
+.galaxy {
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.galaxy.is-dim {
+  opacity: 0.25;
+}
+
+.galaxy-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1px;
+  stroke-dasharray: 2 6;
+  opacity: 0.45;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ring-spin 120s linear infinite;
+}
+
+.galaxy-arm {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1px;
+  opacity: 0.16;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: galaxy-swirl 90s linear infinite;
+}
+
+@keyframes galaxy-swirl {
+  from {
+    transform: rotate(-25deg);
+  }
+  to {
+    transform: rotate(335deg);
+  }
+}
+
+.galaxy-label {
+  fill: currentColor;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  paint-order: stroke;
+  stroke: rgba(4, 5, 14, 0.85);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* ---------- Sidebar (star list) ---------- */
+.sidebar-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.sidebar-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 3, 10, 0.55);
+  pointer-events: auto;
+  animation: fade-in 0.2s ease-out;
+}
+
+.sidebar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(320px, calc(100vw - 56px));
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--safe-top) + 10px) 0 0 var(--safe-left);
+  background: var(--surface-solid);
+  border-right: 1px solid var(--border);
+  box-shadow: 20px 0 60px -20px rgba(0, 0, 0, 0.8);
+  pointer-events: auto;
+  touch-action: pan-y; /* vertical scrolling stays native; horizontal swipe closes */
+  transition: transform 0.2s ease;
+  animation: slide-in-left 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Every element inside (incl. buttons) must allow only vertical panning,
+   otherwise the browser takes the horizontal "swipe to close" gesture. */
+.sidebar * {
+  touch-action: pan-y;
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px 4px 20px;
+}
+
+.sidebar-title {
+  flex: 1;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.sidebar-search {
+  padding: 6px 16px 10px;
+}
+
+.sidebar-search .input {
+  padding: 9px 12px;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 8px 12px;
+}
+
+.sidebar-empty {
+  padding: 12px;
+}
+
+.sidebar-section {
+  margin-top: 8px;
+}
+
+.sidebar-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.sidebar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar-note {
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+}
+
+.sidebar-note.is-selected {
+  background: rgba(157, 180, 255, 0.12);
+}
+
+.sidebar-note-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 4px 6px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+}
+
+.sidebar-note-open:hover {
+  background: var(--surface-hover);
+}
+
+.sidebar-note-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-pin {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  color: var(--text-faint);
+}
+
+.sidebar-group {
+  margin-top: 10px;
+  padding-bottom: 4px;
+  border-radius: 14px;
+  background: radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--group-color) 12%, transparent), transparent 70%);
+}
+
+.sidebar-group-header {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-group-header .icon-button {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+
+.sidebar-group-header .icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.sidebar-group-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px 0 6px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-weight: 650;
+}
+
+.sidebar-group-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--group-color);
+}
+
+.sidebar-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+.sidebar-chevron {
+  display: grid;
+  color: var(--text-faint);
+  transition: transform 0.2s ease;
+}
+
+.sidebar-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.sidebar-group .sidebar-list {
+  padding-left: 14px;
+}
+
+.sidebar-group-empty {
+  padding: 2px 16px 8px 34px;
+  font-size: 13px;
+}
+
+.sidebar-footer {
+  padding: 10px 16px calc(var(--safe-bottom) + 12px);
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-new-group {
+  width: 100%;
+}
+
+.sidebar-hint {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* Wide screens: the list sits next to the universe (no backdrop) */
+.sidebar-layer:not(.is-overlay) .sidebar {
+  top: calc(var(--safe-top) + 8px);
+  bottom: calc(var(--safe-bottom) + 8px);
+  left: calc(var(--safe-left) + 8px);
+  width: 320px;
+  padding-top: 10px;
+  padding-left: 0;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.sidebar-layer:not(.is-overlay) .sidebar-hint {
+  display: none;
+}
+
+.sidebar-toggle {
+  flex: none;
+}
+
+/* ---------- Group dialog ---------- */
+.group-dialog-note {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.color-swatch {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.color-swatch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.color-swatch span {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--swatch); /* fallback for iOS < 16.2 */
+  background: radial-gradient(circle at 40% 35%, #fff 0%, var(--swatch) 45%, color-mix(in srgb, var(--swatch) 60%, #000) 100%);
+  box-shadow: 0 0 14px -2px var(--swatch);
+  transition: transform 0.15s ease;
+}
+
+.color-swatch.is-checked {
+  box-shadow: 0 0 0 2px var(--swatch);
+}
+
+.color-swatch:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.group-delete {
+  margin-top: 4px;
+}
+
+/* Native select, styled like the other inputs */
+.select {
+  padding-right: 36px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+    linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  background-color: rgba(255, 255, 255, 0.045);
+}
+
+.select option {
+  background: #11152e;
+  color: var(--text);
+}
+
+.new-group-input {
+  margin-top: 8px;
 }
 
 /* ---------- Floating controls ---------- */
@@ -1641,9 +2109,13 @@ p {
     font-size: 16px;
   }
 
-  .logo {
-    width: 30px;
-    height: 30px;
+  /* The ☰ button takes the logo's place on phones */
+  .topbar .logo {
+    display: none;
+  }
+
+  .brand {
+    gap: 6px;
   }
 
   .star-count-links {

@@ -74,6 +74,12 @@ export const ja = {
     deleteAria: 'この星を削除',
     sheetExpand: '大きく表示',
     sheetCollapse: '小さく表示',
+    pin: 'ピン留めする',
+    unpin: 'ピン留めを外す',
+    showLinkedMemo: (title: string) => `「${title}」のメモを表示`,
+    hideLinkedMemo: (title: string) => `「${title}」のメモを閉じる`,
+    linkedEmptyBody: '本文はありません。',
+    openStar: 'この星を開く',
   },
 
   form: {
@@ -86,6 +92,9 @@ export const ja = {
     categoryLabel: 'カテゴリ',
     bodyLabel: 'メモ',
     bodyPlaceholder: '思いついたことを書きとめましょう…',
+    groupLabel: 'グループ',
+    noGroup: 'グループなし',
+    newGroupOption: '＋ 新しいグループをつくる…',
     required: '必須',
     optional: '任意',
     errors: {
@@ -123,6 +132,11 @@ export const ja = {
     exported: 'バックアップファイルを書き出しました。',
     shared: 'バックアップファイルを共有しました。',
     imported: 'バックアップを読み込みました。',
+    pinned: 'ピン留めしました。',
+    unpinned: 'ピン留めを外しました。',
+    groupCreated: (name: string) => `グループ「${name}」をつくりました。`,
+    groupSaved: 'グループを保存しました。',
+    groupDeleted: 'グループを削除しました。',
   },
 
   deleteDialog: {
@@ -140,6 +154,53 @@ export const ja = {
       `いまの宇宙（星${current}個）を、バックアップの内容（星${notes}個・つながり${links}本）で置き換えます。` +
       'いまの内容は消えるので、必要なら先に「バックアップを書き出す」で保存してください。',
     confirm: '置き換える',
+  },
+
+  sidebar: {
+    title: '星の一覧',
+    open: '星の一覧を開く',
+    close: '星の一覧を閉じる',
+    searchPlaceholder: '一覧から探す…',
+    searchAria: '星の一覧を絞り込む',
+    pinnedHeading: 'ピン留め',
+    ungroupedHeading: 'グループなし',
+    newGroup: '新しいグループ',
+    focusGroup: (name: string) => `「${name}」を宇宙で表示`,
+    editGroup: (name: string) => `「${name}」を編集`,
+    collapse: (name: string) => `「${name}」をたたむ`,
+    expand: (name: string) => `「${name}」を開く`,
+    empty: 'まだ星がありません。',
+    noMatch: (q: string) => `「${q}」に一致する星はありません。`,
+    emptyGroup: 'まだ星がありません。星の「編集」からこのグループを選べます。',
+    pin: (title: string) => `「${title}」をピン留めする`,
+    unpin: (title: string) => `「${title}」のピン留めを外す`,
+    swipeHint: '画面の左端から右へスワイプしても開けます。',
+  },
+
+  groupDialog: {
+    createTitle: '新しいグループ',
+    editTitle: 'グループを編集',
+    nameLabel: 'グループ名',
+    namePlaceholder: '例：研究テーマ',
+    colorLabel: '銀河の色',
+    colorNames: ['青', 'ピンク', 'ターコイズ', 'オレンジ', '紫', '緑'],
+    create: '作成する',
+    save: '保存する',
+    delete: 'このグループを削除',
+    note: 'グループは、宇宙の中で星をまとめて囲む「銀河」として表示されます。',
+    errors: {
+      required: 'グループ名を入力してください。',
+      tooLong: (max: number) => `グループ名は${max}文字以内にしてください。`,
+    },
+  },
+
+  deleteGroupDialog: {
+    title: 'グループを削除しますか？',
+    message: (name: string, count: number) =>
+      count > 0
+        ? `グループ「${name}」を削除します。中の星${count}個は削除されず、「グループなし」になります。`
+        : `グループ「${name}」を削除します。`,
+    confirm: '削除する',
   },
 
   hint: {
@@ -177,6 +238,7 @@ export const ja = {
       ['星を長押ししてドラッグ', '星を動かす'],
       ['1本指でドラッグ', '宇宙を移動'],
       ['2本指でピンチ', '拡大・縮小'],
+      ['左端から右へスワイプ', '星の一覧（ピン留め・グループ）'],
     ],
     mouse: [
       ['星をクリック', 'メモを開く'],
@@ -184,6 +246,7 @@ export const ja = {
       ['何もない所をドラッグ', '宇宙を移動'],
       ['マウスホイール', '拡大・縮小'],
       ['「/」キー・「N」キー', '検索・新しい星'],
+      ['左上の ☰ ボタン', '星の一覧（ピン留め・グループ）'],
     ],
     shapesHeading: '星の形',
     dataHeading: 'データの保存について',

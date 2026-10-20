@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_IDS, type CategoryId, type UniverseData } from './domain/types';
+import { GROUP_COLORS } from './domain/groups';
 import { linkedNotes, matchesQuery } from './domain/universe';
 import { ja } from './i18n/ja';
 import { useUniverseStore, type StorageNotice } from './state/useUniverseStore';
@@ -13,9 +14,11 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { ConnectPicker } from './components/ConnectPicker';
 import { DataMenu } from './components/DataMenu';
 import { DetailPanel } from './components/DetailPanel';
+import { GroupDialog } from './components/GroupDialog';
 import { HelpDialog } from './components/HelpDialog';
 import { NoteFormModal } from './components/NoteFormModal';
 import { SearchBox } from './components/SearchBox';
+import { Sidebar } from './components/Sidebar';
 import { Toast, type ToastMessage } from './components/Toast';
 import { TopBar } from './components/TopBar';
 import { CloseIcon, FitIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from './components/icons';
@@ -28,7 +31,13 @@ type Dialog =
   | { kind: 'delete'; id: string }
   | { kind: 'import'; data: UniverseData }
   | { kind: 'help' }
+  | { kind: 'group-create' }
+  | { kind: 'group-edit'; id: string }
+  | { kind: 'group-delete'; id: string }
   | null;
+
+/** Width of the star list on wide screens (keep in sync with .sidebar in styles.css). */
+const SIDEBAR_WIDTH = 320;
 
 const NOTICE_TEXT: Record<Exclude<StorageNotice, null>, string> = {
   repaired: ja.storageNotice.repaired,
@@ -57,6 +66,7 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [activeCats, setActiveCats] = useState<Set<CategoryId>>(() => new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [connectSourceId, setConnectSourceId] = useState<string | null>(null);
   const [newStarId, setNewStarId] = useState<string | null>(null);
@@ -80,6 +90,8 @@ export default function App() {
   const notesById = useMemo(() => new Map(data.notes.map((n) => [n.id, n])), [data.notes]);
   const selected = selectedId ? notesById.get(selectedId) ?? null : null;
   const connectSource = connectSourceId ? notesById.get(connectSourceId) ?? null : null;
+  const groupsById = useMemo(() => new Map(data.groups.map((g) => [g.id, g])), [data.groups]);
+  const nextGroupColor = GROUP_COLORS[data.groups.length % GROUP_COLORS.length];
 
   // Clear selection if the selected note disappears (deleted, import…).
   useEffect(() => {
@@ -111,11 +123,14 @@ export default function App() {
   const insets: Insets = useMemo(
     () => ({
       top: (topBox?.bottom ?? 0) + 8,
-      left: roomyFilters && filterBox ? filterBox.right + 8 : 0,
+      left: Math.max(
+        roomyFilters && filterBox ? filterBox.right + 8 : 0,
+        sidebarOpen && !compact ? SIDEBAR_WIDTH + 24 : 0,
+      ),
       right: detailVisible && !compact && detailBox ? detailBox.width + 24 : 0,
       bottom: detailVisible && compact && detailBox ? detailBox.height : 24,
     }),
-    [topBox, filterBox, detailBox, roomyFilters, compact, detailVisible],
+    [topBox, filterBox, detailBox, roomyFilters, compact, detailVisible, sidebarOpen],
   );
 
   // --- Selection -------------------------------------------------------------
@@ -160,6 +175,26 @@ export default function App() {
   }, [connectSourceId]);
 
   const onMoveEnd = useCallback((id: string) => actions.settleStar(id), [actions]);
+  const openSidebar = useCallback(() => {
+    setFiltersOpen(false);
+    setSidebarOpen(true);
+  }, []);
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
+  const togglePin = (id: string) => {
+    const note = notesById.get(id);
+    if (!note) return;
+    actions.setPinned(id, !note.pinned);
+    showToast(note.pinned ? ja.toast.unpinned : ja.toast.pinned);
+  };
+
+  /** Creates the group typed in the note form (if any) and returns the group id to use. */
+  const resolveGroupId = (values: { groupId: string | null; newGroupName?: string }) => {
+    if (!values.newGroupName) return values.groupId;
+    const group = actions.createGroup(values.newGroupName, nextGroupColor);
+    showToast(ja.toast.groupCreated(group.name));
+    return group.id;
+  };
 
   // --- Filters -------------------------------------------------------------
   const toggleCategory = (id: CategoryId) =>
@@ -247,6 +282,7 @@ export default function App() {
         onBackgroundTap={onBackgroundTap}
         onMoveStar={actions.moveStar}
         onMoveEnd={onMoveEnd}
+        onEdgeSwipe={openSidebar}
       />
 
       <TopBar
@@ -257,6 +293,8 @@ export default function App() {
         activeFilterCount={activeCats.size}
         filtersOpen={filtersOpen}
         onToggleFilters={() => setFiltersOpen((v) => !v)}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => (sidebarOpen ? closeSidebar() : openSidebar())}
         search={
           <SearchBox
             ref={searchRef}
@@ -341,7 +379,9 @@ export default function App() {
           ref={detailRef}
           note={selected}
           links={links}
+          group={selected.groupId ? groupsById.get(selected.groupId) ?? null : null}
           sheet={compact}
+          onTogglePin={() => togglePin(selected.id)}
           onClose={() => setSelectedId(null)}
           onEdit={() => setDialog({ kind: 'edit', id: selected.id })}
           onDelete={() => setDialog({ kind: 'delete', id: selected.id })}
@@ -403,16 +443,40 @@ export default function App() {
         </div>
       )}
 
+      {sidebarOpen && (
+        <Sidebar
+          notes={data.notes}
+          groups={data.groups}
+          selectedId={selectedId}
+          overlay={compact}
+          onClose={closeSidebar}
+          onOpenNote={(id) => {
+            if (compact) closeSidebar();
+            openStar(id, true);
+          }}
+          onTogglePin={togglePin}
+          onFocusGroup={(id) => {
+            if (compact) closeSidebar();
+            setSelectedId(null);
+            window.setTimeout(() => universeRef.current?.focusGroup(id), 80);
+          }}
+          onEditGroup={(id) => setDialog({ kind: 'group-edit', id })}
+          onCreateGroup={() => setDialog({ kind: 'group-create' })}
+        />
+      )}
+
       <Toast toast={toast} onDone={clearToast} />
 
       {/* --- Dialogs ------------------------------------------------------ */}
       {dialog?.kind === 'create' && (
         <NoteFormModal
           defaultCategory={activeCats.size === 1 ? [...activeCats][0] : null}
+          groups={data.groups}
           onClose={() => setDialog(null)}
           onSubmit={(values) => {
             const near = universeRef.current?.visibleCenter() ?? { x: 0, y: 0 };
-            const note = actions.createNote(values, near);
+            const groupId = resolveGroupId(values);
+            const note = actions.createNote({ ...values, groupId }, near);
             setDialog(null);
             setNewStarId(note.id);
             openStar(note.id, false);
@@ -424,9 +488,18 @@ export default function App() {
       {editing && (
         <NoteFormModal
           note={editing}
+          groups={data.groups}
           onClose={() => setDialog(null)}
           onSubmit={(values) => {
-            actions.updateNote(editing.id, values);
+            const groupId = resolveGroupId(values);
+            actions.updateNote(editing.id, {
+              title: values.title,
+              body: values.body,
+              category: values.category,
+              groupId,
+            });
+            // The star may have moved into its new galaxy: keep it in view.
+            window.setTimeout(() => universeRef.current?.ensureVisible(editing.id), 80);
             setDialog(null);
             showToast(ja.toast.saved);
           }}
@@ -484,6 +557,53 @@ export default function App() {
       )}
 
       {dialog?.kind === 'help' && <HelpDialog touch={touch} onClose={() => setDialog(null)} />}
+
+      {dialog?.kind === 'group-create' && (
+        <GroupDialog
+          suggestedColor={nextGroupColor}
+          onClose={() => setDialog(null)}
+          onSubmit={({ name, color }) => {
+            actions.createGroup(name, color);
+            setDialog(null);
+            showToast(ja.toast.groupCreated(name));
+          }}
+        />
+      )}
+
+      {dialog?.kind === 'group-edit' && groupsById.get(dialog.id) && (
+        <GroupDialog
+          group={groupsById.get(dialog.id)}
+          onClose={() => setDialog(null)}
+          onSubmit={(patch) => {
+            actions.updateGroup(dialog.id, patch);
+            setDialog(null);
+            showToast(ja.toast.groupSaved);
+          }}
+          onDelete={() => setDialog({ kind: 'group-delete', id: dialog.id })}
+        />
+      )}
+
+      {dialog?.kind === 'group-delete' && groupsById.get(dialog.id) && (
+        <ConfirmDialog
+          title={ja.deleteGroupDialog.title}
+          message={
+            <p>
+              {ja.deleteGroupDialog.message(
+                groupsById.get(dialog.id)!.name,
+                data.notes.filter((n) => n.groupId === dialog.id).length,
+              )}
+            </p>
+          }
+          confirmLabel={ja.deleteGroupDialog.confirm}
+          danger
+          onCancel={() => setDialog(null)}
+          onConfirm={() => {
+            actions.deleteGroup(dialog.id);
+            setDialog(null);
+            showToast(ja.toast.groupDeleted);
+          }}
+        />
+      )}
     </div>
   );
 }

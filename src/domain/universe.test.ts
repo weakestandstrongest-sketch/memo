@@ -61,13 +61,13 @@ describe('notes', () => {
   });
 
   it('validates required fields', () => {
-    expect(validateDraft({ title: ' ', body: '', category: null })).toEqual({
+    expect(validateDraft({ title: ' ', body: '', category: null, groupId: null })).toEqual({
       title: 'required',
       category: 'required',
     });
-    expect(validateDraft({ title: 'x'.repeat(121), body: '', category: 'ideas' }).title).toBe('tooLong');
-    expect(validateDraft({ title: 'ok', body: 'x'.repeat(10001), category: 'ideas' }).body).toBe('tooLong');
-    expect(validateDraft({ title: 'Fine', body: '', category: 'other' })).toEqual({});
+    expect(validateDraft({ title: 'x'.repeat(121), body: '', category: 'ideas', groupId: null }).title).toBe('tooLong');
+    expect(validateDraft({ title: 'ok', body: 'x'.repeat(10001), category: 'ideas', groupId: null }).body).toBe('tooLong');
+    expect(validateDraft({ title: 'Fine', body: '', category: 'other', groupId: null })).toEqual({});
   });
 });
 

@@ -23,7 +23,8 @@ import {
 } from 'react';
 import { CATEGORY_LIST } from '../../domain/categories';
 import { ja } from '../../i18n/ja';
-import { boundsOf } from '../../domain/layout';
+import { galaxyCircles, type GalaxyCircle } from '../../domain/groups';
+import { boundsOf, type Bounds } from '../../domain/layout';
 import type { Position, UniverseData } from '../../domain/types';
 import { degreeMap, neighborIds } from '../../domain/universe';
 import { StarField, Twinkles } from './StarField';
@@ -53,6 +54,8 @@ export interface UniverseHandle {
   /** Pans only if the star is hidden behind a panel or off screen. */
   ensureVisible(id: string): void;
   fitAll(animate?: boolean): void;
+  /** Smoothly frames one group's galaxy. */
+  focusGroup(groupId: string): void;
   zoomBy(factor: number): void;
   /** The universe point currently at the centre of the visible area. */
   visibleCenter(): Position;
@@ -71,6 +74,8 @@ interface UniverseProps {
   onBackgroundTap(): void;
   onMoveStar(id: string, position: Position): void;
   onMoveEnd(id: string): void;
+  /** Touch: the user swiped right from the left edge of the screen. */
+  onEdgeSwipe?(): void;
 }
 
 const MIN_ZOOM = 0.2;
@@ -103,7 +108,12 @@ type Gesture =
       startTime: number;
       moved: boolean;
     }
-  | { kind: 'pinch'; startDist: number; startK: number; anchor: Position };
+  | { kind: 'pinch'; startDist: number; startK: number; anchor: Position }
+  | { kind: 'edge'; pointerId: number; startX: number; startY: number }
+  | { kind: 'consumed'; pointerId: number };
+
+/** Touches starting this close (px) to the left edge can open the sidebar. */
+const EDGE_ZONE = 24;
 
 /** Star radius grows a little with the number of connections and note length. */
 function starSize(degree: number, bodyLength: number): number {
@@ -136,6 +146,13 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
   const insetsRef = useRef(insets);
   const propsRef = useRef(props);
   layoutRef.current = data.layout;
+  // Galaxy circles (one per group) — also used to frame the camera.
+  const galaxies = useMemo(
+    () => galaxyCircles({ notes: data.notes, layout: data.layout, groups: data.groups }),
+    [data.notes, data.layout, data.groups],
+  );
+  const galaxiesRef = useRef<GalaxyCircle[]>(galaxies);
+  galaxiesRef.current = galaxies;
   insetsRef.current = insets;
   propsRef.current = props;
   sizeRef.current = size;
@@ -190,11 +207,11 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
     [setView],
   );
 
-  const fitAll = useCallback(
-    (animate = true) => {
+  /** Frames the given area (universe coords) inside the visible part of the screen. */
+  const fitBounds = useCallback(
+    (b: Bounds | null, animate = true, maxZoom = 1.3) => {
       const { w, h } = sizeRef.current;
       if (w === 0 || h === 0) return;
-      const b = boundsOf(Object.values(layoutRef.current));
       const i = insetsRef.current;
       const availW = Math.max(120, w - i.left - i.right);
       const availH = Math.max(120, h - i.top - i.bottom);
@@ -208,7 +225,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
       const padY = 60;
       const k = clampZoom(
         Math.min(
-          1.3,
+          maxZoom,
           (availW - padX * 2) / Math.max(1, b.maxX - b.minX),
           (availH - padY * 2) / Math.max(1, b.maxY - b.minY),
         ),
@@ -221,6 +238,31 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
       }
     },
     [animateTo, setView],
+  );
+
+  const circleBounds = (c: GalaxyCircle): Bounds => ({
+    minX: c.cx - c.r,
+    minY: c.cy - c.r,
+    maxX: c.cx + c.r,
+    maxY: c.cy + c.r,
+  });
+
+  /** Frames every star and galaxy. */
+  const fitAll = useCallback(
+    (animate = true) => {
+      const stars = boundsOf(Object.values(layoutRef.current));
+      const all = [stars, ...galaxiesRef.current.map(circleBounds)].filter((b): b is Bounds => b !== null);
+      const merged = all.length
+        ? {
+            minX: Math.min(...all.map((b) => b.minX)),
+            minY: Math.min(...all.map((b) => b.minY)),
+            maxX: Math.max(...all.map((b) => b.maxX)),
+            maxY: Math.max(...all.map((b) => b.maxY)),
+          }
+        : null;
+      fitBounds(merged, animate);
+    },
+    [fitBounds],
   );
 
   const zoomAt = useCallback(
@@ -256,6 +298,10 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         }
       },
       fitAll,
+      focusGroup(groupId) {
+        const c = galaxiesRef.current.find((g) => g.group.id === groupId);
+        if (c) fitBounds(circleBounds(c), true, 1.6);
+      },
       zoomBy(factor) {
         const v = viewRef.current;
         const f = focalPoint();
@@ -385,6 +431,13 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
     }
 
     const touch = e.pointerType === 'touch';
+
+    // A touch at the very left edge may be the "open sidebar" swipe.
+    if (touch && p.x <= EDGE_ZONE && propsRef.current.onEdgeSwipe) {
+      gesture.current = { kind: 'edge', pointerId: e.pointerId, startX: p.x, startY: p.y };
+      return;
+    }
+
     const starEl = (e.target as Element).closest?.('[data-note-id]');
     const id = starEl?.getAttribute('data-note-id');
     const pos = id ? layoutRef.current[id] : undefined;
@@ -442,6 +495,21 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
     const g = gesture.current;
 
     switch (g.kind) {
+      case 'edge': {
+        if (g.pointerId !== e.pointerId) return;
+        const dx = p.x - g.startX;
+        const dy = p.y - g.startY;
+        if (dx > 40 && dx > Math.abs(dy) * 1.3) {
+          gesture.current = { kind: 'consumed', pointerId: g.pointerId };
+          propsRef.current.onEdgeSwipe?.();
+        } else if (Math.abs(dy) > 14 || dx < -10) {
+          // Not a sidebar swipe after all: move the universe instead.
+          startPan(e.pointerId, { x: g.startX, y: g.startY }, true, true);
+          setPanning(true);
+          applyPan(p);
+        }
+        return;
+      }
       case 'pinch': {
         const [a, b] = Array.from(pointers.current.values());
         if (!a || !b) return;
@@ -511,6 +579,14 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
     const g = gesture.current;
 
     switch (g.kind) {
+      case 'edge':
+      case 'consumed': {
+        if (g.pointerId !== e.pointerId) return;
+        gesture.current = { kind: 'idle' };
+        // A plain tap at the edge behaves like any tap on empty space.
+        if (g.kind === 'edge' && !cancelled) propsRef.current.onBackgroundTap();
+        return;
+      }
       case 'pinch': {
         const remaining = Array.from(pointers.current.entries());
         if (remaining.length === 1) {
@@ -609,7 +685,8 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         top: pos.y * k + (size * 1.75 + 3) * glyphToScreen,
         width: displayWidth(truncateByWidth(note.title, MAX_LABEL_WIDTH)) * fontPx * 0.52 + 4,
         height: fontPx * 1.3,
-        priority: rank[emphasis],
+        // Pinned stars get their label before other ordinary stars.
+        priority: rank[emphasis] - (note.pinned && emphasis !== 'selected' ? 0.5 : 0),
         degree,
       });
     }
@@ -668,9 +745,46 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
               <stop offset="100%" stopColor={c.color} stopOpacity={0.85} />
             </radialGradient>
           ))}
+          {galaxies.map((c) => (
+            <radialGradient key={`galaxy-${c.group.id}`} id={`galaxy-${c.group.id}`}>
+              <stop offset="0%" stopColor={c.group.color} stopOpacity={0.2} />
+              <stop offset="55%" stopColor={c.group.color} stopOpacity={0.08} />
+              <stop offset="100%" stopColor={c.group.color} stopOpacity={0.015} />
+            </radialGradient>
+          ))}
         </defs>
 
         <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
+          <g className="galaxies" aria-hidden="true">
+            {galaxies.map((c) => {
+              const dim = matchIds !== null && !data.notes.some((n) => n.groupId === c.group.id && matchIds.has(n.id));
+              const labelPx = 12.5 / view.k; // ~12.5px on screen at any zoom
+              return (
+                <g key={c.group.id} className={`galaxy ${dim ? 'is-dim' : ''}`} style={{ color: c.group.color }}>
+                  <circle cx={c.cx} cy={c.cy} r={c.r} fill={`url(#galaxy-${c.group.id})`} />
+                  <ellipse
+                    className="galaxy-arm"
+                    cx={c.cx}
+                    cy={c.cy}
+                    rx={c.r * 0.72}
+                    ry={c.r * 0.28}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <circle className="galaxy-ring" cx={c.cx} cy={c.cy} r={c.r} vectorEffect="non-scaling-stroke" />
+                  <text
+                    className="galaxy-label"
+                    x={c.cx}
+                    y={c.cy - c.r - labelPx * 0.6}
+                    textAnchor="middle"
+                    style={{ fontSize: labelPx }}
+                  >
+                    {c.group.name}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+
           <g className="links">
             {data.connections.map((c) => {
               const a = data.layout[c.sourceId];

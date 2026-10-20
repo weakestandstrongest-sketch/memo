@@ -87,6 +87,24 @@ describe('sanitizeUniverse', () => {
     expect(result!.repairs).toBeGreaterThan(0);
   });
 
+  it('loads data saved before groups existed, and repairs bad group references', () => {
+    const result = sanitizeUniverse({
+      notes: [
+        { id: 'a', title: 'A', category: 'ideas', pinned: true, groupId: 'g1' },
+        { id: 'b', title: 'B', category: 'ideas', groupId: 'missing' },
+      ],
+      groups: [{ id: 'g1', name: '研究', color: 'not-a-color' }, { id: 'g1', name: 'duplicate' }, { name: 'no id' }],
+    })!;
+    expect(result.data.groups).toHaveLength(1);
+    expect(result.data.groups[0].color).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(result.data.notes[0]).toMatchObject({ pinned: true, groupId: 'g1' });
+    expect(result.data.notes[1].groupId).toBeUndefined();
+
+    const old = sanitizeUniverse({ notes: [{ id: 'x', title: 'X', body: '', category: 'other', createdAt: '2026-01-01T00:00:00.000Z' }], connections: [], layout: { x: { x: 0, y: 0 } } })!;
+    expect(old.data.groups).toEqual([]);
+    expect(old.repairs).toBe(0);
+  });
+
   it('rejects non-universe values', () => {
     expect(sanitizeUniverse(null)).toBeNull();
     expect(sanitizeUniverse([])).toBeNull();

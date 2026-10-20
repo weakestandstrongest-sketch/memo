@@ -1,6 +1,6 @@
 import { forwardRef, type ReactNode } from 'react';
 import { ja } from '../i18n/ja';
-import { FilterIcon } from './icons';
+import { FilterIcon, HamburgerIcon } from './icons';
 
 interface TopBarProps {
   search: ReactNode;
@@ -12,15 +12,39 @@ interface TopBarProps {
   activeFilterCount: number;
   filtersOpen: boolean;
   onToggleFilters: () => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
 export const TopBar = forwardRef<HTMLElement, TopBarProps>(function TopBar(
-  { search, menu, starCount, linkCount, showFilterButton, activeFilterCount, filtersOpen, onToggleFilters },
+  {
+    search,
+    menu,
+    starCount,
+    linkCount,
+    showFilterButton,
+    activeFilterCount,
+    filtersOpen,
+    onToggleFilters,
+    sidebarOpen,
+    onToggleSidebar,
+  },
   ref,
 ) {
   return (
     <header ref={ref} className="topbar">
       <div className="brand">
+        <button
+          type="button"
+          className="icon-button topbar-button sidebar-toggle"
+          aria-label={sidebarOpen ? ja.sidebar.close : ja.sidebar.open}
+          aria-expanded={sidebarOpen}
+          aria-controls="sidebar"
+          title={ja.sidebar.open}
+          onClick={onToggleSidebar}
+        >
+          <HamburgerIcon />
+        </button>
         <Logo />
         <div className="brand-text">
           <h1 className="brand-name">{ja.app.name}</h1>

@@ -4,6 +4,7 @@
  * which makes them easy to test and to reuse (e.g. on a server later).
  */
 import { createId } from '../utils/id';
+import { groupCenter } from './groups';
 import { findFreePosition, resolveOverlap } from './layout';
 import type { CategoryId, Connection, Note, NoteDraft, Position, UniverseData } from './types';
 
@@ -13,7 +14,7 @@ export const LIMITS = {
 } as const;
 
 export function emptyUniverse(): UniverseData {
-  return { version: 1, notes: [], connections: [], layout: {} };
+  return { version: 1, notes: [], connections: [], layout: {}, groups: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,8 @@ export interface NewNoteInput {
   title: string;
   body: string;
   category: CategoryId;
+  /** Group id, or null / undefined for "no group". */
+  groupId?: string | null;
 }
 
 export function buildNote(input: NewNoteInput, now = new Date()): Note {
@@ -56,13 +59,18 @@ export function buildNote(input: NewNoteInput, now = new Date()): Note {
     category: input.category,
     createdAt: iso,
     updatedAt: iso,
+    ...(input.groupId ? { groupId: input.groupId } : {}),
   };
 }
 
-/** Adds a note and places its star in a free spot near `near`. */
+/**
+ * Adds a note and places its star in a free spot near `near`
+ * (or inside its group's galaxy, if it belongs to a group that already has stars).
+ */
 export function addNote(data: UniverseData, note: Note, near: Position): UniverseData {
   if (data.notes.some((n) => n.id === note.id)) return data;
-  const position = findFreePosition(data.layout, near);
+  const galaxyCenter = note.groupId ? groupCenter(data, note.groupId) : null;
+  const position = findFreePosition(data.layout, galaxyCenter ?? near);
   return {
     ...data,
     notes: [...data.notes, note],
@@ -76,19 +84,32 @@ export function updateNote(
   patch: Partial<NewNoteInput>,
   now = new Date(),
 ): UniverseData {
-  let changed = false;
-  const notes = data.notes.map((n) => {
-    if (n.id !== id) return n;
-    changed = true;
-    return {
-      ...n,
-      ...(patch.title !== undefined && { title: patch.title.trim().slice(0, LIMITS.title) }),
-      ...(patch.body !== undefined && { body: patch.body.slice(0, LIMITS.body) }),
-      ...(patch.category !== undefined && { category: patch.category }),
-      updatedAt: now.toISOString(),
-    };
-  });
-  return changed ? { ...data, notes } : data;
+  const current = data.notes.find((n) => n.id === id);
+  if (!current) return data;
+
+  const updated: Note = {
+    ...current,
+    ...(patch.title !== undefined && { title: patch.title.trim().slice(0, LIMITS.title) }),
+    ...(patch.body !== undefined && { body: patch.body.slice(0, LIMITS.body) }),
+    ...(patch.category !== undefined && { category: patch.category }),
+    updatedAt: now.toISOString(),
+  };
+  if (patch.groupId !== undefined) {
+    if (patch.groupId) updated.groupId = patch.groupId;
+    else delete updated.groupId;
+  }
+  let next: UniverseData = { ...data, notes: data.notes.map((n) => (n.id === id ? updated : n)) };
+
+  // Moving into another group: fly the star over to that galaxy.
+  if (updated.groupId && updated.groupId !== current.groupId) {
+    const center = groupCenter(next, updated.groupId, id);
+    if (center) {
+      const others = { ...next.layout };
+      delete others[id];
+      next = { ...next, layout: { ...next.layout, [id]: findFreePosition(others, center) } };
+    }
+  }
+  return next;
 }
 
 /** Deletes a note together with its star position and all its connections. */

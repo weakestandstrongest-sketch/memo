@@ -6,7 +6,8 @@
 import { isCategoryId } from '../domain/categories';
 import { ensureLayout } from '../domain/layout';
 import { LIMITS, pairKey } from '../domain/universe';
-import type { Connection, ConnectionOrigin, Layout, Note, UniverseData } from '../domain/types';
+import { GROUP_COLORS, GROUP_NAME_MAX } from '../domain/groups';
+import type { Connection, ConnectionOrigin, Group, Layout, Note, UniverseData } from '../domain/types';
 import { createId } from '../utils/id';
 
 export interface SanitizeResult {
@@ -31,6 +32,25 @@ export function sanitizeUniverse(raw: unknown, now = new Date()): SanitizeResult
 
   let repairs = 0;
   const nowIso = now.toISOString();
+
+  // --- Groups (added later; older data simply has none) ----------------------
+  const groups: Group[] = [];
+  const groupIds = new Set<string>();
+  const rawGroups = Array.isArray(raw.groups) ? raw.groups : [];
+  for (const item of rawGroups) {
+    if (!isObject(item) || !isNonEmptyString(item.id) || !isNonEmptyString(item.name) || groupIds.has(item.id)) {
+      repairs++;
+      continue;
+    }
+    groupIds.add(item.id);
+    const color = typeof item.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(item.color) ? item.color : GROUP_COLORS[0];
+    groups.push({
+      id: item.id,
+      name: item.name.trim().slice(0, GROUP_NAME_MAX),
+      color,
+      createdAt: isValidDate(item.createdAt) ? item.createdAt : nowIso,
+    });
+  }
 
   // --- Notes ---------------------------------------------------------------
   const notes: Note[] = [];
@@ -61,6 +81,11 @@ export function sanitizeUniverse(raw: unknown, now = new Date()): SanitizeResult
       updatedAt,
     };
     if (item.sample === true) note.sample = true;
+    if (item.pinned === true) note.pinned = true;
+    if (typeof item.groupId === 'string') {
+      if (groupIds.has(item.groupId)) note.groupId = item.groupId;
+      else repairs++; // points at a group that no longer exists
+    }
     notes.push(note);
   }
 
@@ -110,7 +135,7 @@ export function sanitizeUniverse(raw: unknown, now = new Date()): SanitizeResult
   }
 
   return {
-    data: { version: 1, notes, connections, layout: ensureLayout(notes, layout) },
+    data: { version: 1, notes, connections, layout: ensureLayout(notes, layout), groups },
     repairs,
   };
 }

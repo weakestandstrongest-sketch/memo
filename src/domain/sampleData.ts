@@ -1,4 +1,4 @@
-import type { Connection, Note, UniverseData } from './types';
+import type { Connection, Group, Note, UniverseData } from './types';
 
 /**
  * A few demo stars shown on first launch, so the universe isn't empty.
@@ -90,11 +90,22 @@ export function createSampleUniverse(now = new Date()): UniverseData {
     },
   ];
 
+  // One sample galaxy, so the group feature is visible on first launch.
+  const groups: Group[] = [
+    { id: 'sample-group-research', name: '研究テーマ', color: '#8fa8ff', createdAt: minutesAgo(60 * 24) },
+  ];
+  const groupOf: Record<string, string> = {
+    'sample-semiconductors': 'sample-group-research',
+    'sample-research-goal': 'sample-group-research',
+  };
+
   const notes: Note[] = raw.map(({ age, x: _x, y: _y, ...n }) => ({
     ...n,
     createdAt: minutesAgo(age),
     updatedAt: minutesAgo(age),
     sample: true,
+    ...(n.id === 'sample-welcome' ? { pinned: true } : {}),
+    ...(groupOf[n.id] ? { groupId: groupOf[n.id] } : {}),
   }));
 
   const layout = Object.fromEntries(raw.map((n) => [n.id, { x: n.x, y: n.y }]));
@@ -116,5 +127,5 @@ export function createSampleUniverse(now = new Date()): UniverseData {
     origin: 'user',
   }));
 
-  return { version: 1, notes, connections, layout };
+  return { version: 1, notes, connections, layout, groups };
 }

@@ -98,3 +98,32 @@ export const TargetIcon = () => (
     <circle cx="12" cy="12" r="2" />
   </Icon>
 );
+export const HamburgerIcon = () => (
+  <Icon>
+    <path d="M4 7h16M4 12h16M4 17h10" />
+  </Icon>
+);
+/** Push-pin. `filled` = currently pinned. */
+export const PinIcon = ({ filled = false, size = 18 }: { filled?: boolean; size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill={filled ? 'currentColor' : 'none'}
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="M9 3h6l-1 6 4 4H6l4-4-1-6z" />
+    <path d="M12 13v8" fill="none" />
+  </svg>
+);
+export const GalaxyIcon = () => (
+  <Icon size={18}>
+    <circle cx="12" cy="12" r="2.2" />
+    <ellipse cx="12" cy="12" rx="9" ry="4.5" transform="rotate(-25 12 12)" strokeDasharray="2.5 2.5" />
+  </Icon>
+);

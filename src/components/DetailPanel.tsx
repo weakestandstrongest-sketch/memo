@@ -1,15 +1,17 @@
-import { forwardRef, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { forwardRef, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { ja } from '../i18n/ja';
 import { CATEGORIES } from '../domain/categories';
-import type { Note } from '../domain/types';
+import type { Group, Note } from '../domain/types';
 import type { LinkedNote } from '../domain/universe';
 import { formatDateTime } from '../utils/format';
-import { CloseIcon, EditIcon, LinkIcon, TrashIcon, UnlinkIcon } from './icons';
+import { ChevronIcon, CloseIcon, EditIcon, LinkIcon, PinIcon, TargetIcon, TrashIcon, UnlinkIcon } from './icons';
 import { CategoryIcon } from './universe/CategoryGlyph';
 
 interface DetailPanelProps {
   note: Note;
   links: LinkedNote[];
+  /** The group (galaxy) this note belongs to, if any. */
+  group: Group | null;
   /** Phone layout: shows as a bottom sheet instead of a side panel. */
   sheet: boolean;
   onClose: () => void;
@@ -18,15 +20,40 @@ interface DetailPanelProps {
   onConnect: () => void;
   onDisconnect: (connectionId: string) => void;
   onOpenNote: (id: string) => void;
+  onTogglePin: () => void;
 }
 
 /** Details of the selected star: a side panel on desktop, a bottom sheet on phones. */
 export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function DetailPanel(
-  { note, links, sheet, onClose, onEdit, onDelete, onConnect, onDisconnect, onOpenNote },
+  { note, links, group, sheet, onClose, onEdit, onDelete, onConnect, onDisconnect, onOpenNote, onTogglePin },
   ref,
 ) {
   const category = CATEGORIES[note.category];
   const [expanded, setExpanded] = useState(false);
+  // Connected stars whose memo is shown inline (several can be open at once).
+  const [openLinks, setOpenLinks] = useState<Set<string>>(() => new Set());
+  const lastOpened = useRef<string | null>(null);
+  const toggleLink = (id: string) =>
+    setOpenLinks((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else {
+        next.add(id);
+        lastOpened.current = id;
+      }
+      return next;
+    });
+
+  // Bring a newly expanded memo into view (it may open below the visible part of the sheet).
+  useEffect(() => {
+    const id = lastOpened.current;
+    if (!id) return;
+    lastOpened.current = null;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    document
+      .querySelector(`[data-linked-note="${CSS.escape(id)}"]`)
+      ?.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+  }, [openLinks]);
   const drag = useRef<{ startY: number; dy: number } | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
 
@@ -83,7 +110,23 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
           <CategoryIcon category={note.category} size={16} />
           {category.label}
         </span>
+        {group && (
+          <span className="group-badge" style={{ ['--group-color' as string]: group.color }}>
+            <span className="group-dot" aria-hidden="true" />
+            {group.name}
+          </span>
+        )}
         {note.sample && <span className="badge badge-muted">{ja.detail.sample}</span>}
+        <button
+          type="button"
+          className={`icon-button detail-pin ${note.pinned ? 'is-pinned' : ''}`}
+          onClick={onTogglePin}
+          aria-pressed={Boolean(note.pinned)}
+          aria-label={note.pinned ? ja.detail.unpin : ja.detail.pin}
+          title={note.pinned ? ja.detail.unpin : ja.detail.pin}
+        >
+          <PinIcon filled={note.pinned} />
+        </button>
         <button type="button" className="icon-button detail-close" onClick={onClose} aria-label={ja.detail.close}>
           <CloseIcon />
         </button>
@@ -115,23 +158,55 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
             <p className="empty-text">{ja.detail.noLinks}</p>
           ) : (
             <ul className="link-list">
-              {links.map(({ connection, note: other }) => (
-                <li key={connection.id} className="link-item">
-                  <button type="button" className="link-open" onClick={() => onOpenNote(other.id)}>
-                    <CategoryIcon category={other.category} size={18} />
-                    <span className="link-title">{other.title}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button link-remove"
-                    onClick={() => onDisconnect(connection.id)}
-                    aria-label={ja.detail.removeLink(other.title)}
-                    title={ja.detail.removeLinkTooltip}
-                  >
-                    <UnlinkIcon />
-                  </button>
-                </li>
-              ))}
+              {links.map(({ connection, note: other }) => {
+                const isOpen = openLinks.has(other.id);
+                const panelId = `linked-memo-${connection.id}`;
+                return (
+                  <li key={connection.id} className={`link-item ${isOpen ? 'is-open' : ''}`} data-linked-note={other.id}>
+                    <div className="link-row">
+                      <button
+                        type="button"
+                        className="link-open"
+                        onClick={() => toggleLink(other.id)}
+                        aria-expanded={isOpen}
+                        aria-controls={panelId}
+                        aria-label={isOpen ? ja.detail.hideLinkedMemo(other.title) : ja.detail.showLinkedMemo(other.title)}
+                      >
+                        <CategoryIcon category={other.category} size={18} />
+                        <span className="link-title">{other.title}</span>
+                        <span className="link-chevron" aria-hidden="true">
+                          <ChevronIcon />
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-button link-remove"
+                        onClick={() => onDisconnect(connection.id)}
+                        aria-label={ja.detail.removeLink(other.title)}
+                        title={ja.detail.removeLinkTooltip}
+                      >
+                        <UnlinkIcon />
+                      </button>
+                    </div>
+                    {isOpen && (
+                      <div id={panelId} className="linked-memo">
+                        <p className="linked-memo-meta">
+                          {CATEGORIES[other.category].label} ・ {ja.detail.created(formatDateTime(other.createdAt))}
+                        </p>
+                        {other.body ? (
+                          <div className="linked-memo-body">{other.body}</div>
+                        ) : (
+                          <p className="linked-memo-body is-empty">{ja.detail.linkedEmptyBody}</p>
+                        )}
+                        <button type="button" className="button button-small linked-memo-open" onClick={() => onOpenNote(other.id)}>
+                          <TargetIcon />
+                          {ja.detail.openStar}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
