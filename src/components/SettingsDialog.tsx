@@ -172,6 +172,21 @@ export function SettingsDialog({ onClose, onExport, onToast }: SettingsDialogPro
             }}
           />
         </label>
+        <label className="switch-row">
+          <span className="switch-text">
+            <span className="switch-label">{t.splash}</span>
+            <span className="settings-note">{t.splashText}</span>
+          </span>
+          <input
+            type="checkbox"
+            className="switch"
+            checked={settings.display.splash}
+            onChange={(e) => {
+              const on = e.target.checked;
+              save((s) => ({ ...s, display: { ...s.display, splash: on } }));
+            }}
+          />
+        </label>
       </section>
 
       <p className="settings-note settings-device-note">{t.deviceNote}</p>

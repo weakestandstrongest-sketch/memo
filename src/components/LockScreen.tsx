@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AppMark } from './AppMark';
 import { ja } from '../i18n/ja';
 import { verifyPasscode } from '../security/passcode';
 import { readPref, writePref } from '../storage/preferences';
@@ -66,10 +67,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
     <main className="lock-screen" aria-label={ja.lock.screenLabel}>
       <Twinkles />
       <div className="lock-content">
-        <svg className="lock-logo" width="56" height="56" viewBox="-20 -20 40 40" aria-hidden="true">
-          <circle r="19" fill="rgba(255, 209, 102, 0.12)" />
-          <path d="M0 -12 C1.2 -3 3 -1.2 12 0 C3 1.2 1.2 3 0 12 C-1.2 3 -3 1.2 -12 0 C-3 -1.2 -1.2 -3 0 -12Z" fill="#fff6dc" />
-        </svg>
+        <AppMark className="lock-logo" size={72} />
         <h1 className="lock-app-name">{ja.app.name}</h1>
         <p className="lock-title">{ja.lock.title}</p>
 

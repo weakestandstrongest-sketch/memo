@@ -92,7 +92,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
 
   // One sample galaxy, so the group feature is visible on first launch.
   const groups: Group[] = [
-    { id: 'sample-group-research', name: '研究テーマ', color: '#8fa8ff', createdAt: minutesAgo(60 * 24) },
+    { id: 'sample-group-research', name: '研究テーマ', color: '#c9b8ff', createdAt: minutesAgo(60 * 24) },
   ];
   const groupOf: Record<string, string> = {
     'sample-semiconductors': 'sample-group-research',

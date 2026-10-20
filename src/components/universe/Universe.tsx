@@ -27,6 +27,7 @@ import { galaxyCircles, type GalaxyCircle } from '../../domain/groups';
 import { boundsOf, focusRing, type Bounds } from '../../domain/layout';
 import type { Layout, Position, UniverseData } from '../../domain/types';
 import type { SkyPhase } from '../../utils/sky';
+import { splashRemainingMs } from '../../splash';
 import { GalaxyArt } from './GalaxyArt';
 import { ShootingStar } from './ShootingStar';
 import { degreeMap, freshness, neighborIds } from '../../domain/universe';
@@ -166,10 +167,10 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
   const [ripples, setRipples] = useState<Array<{ key: number; x: number; y: number }>>([]);
   const [shots, setShots] = useState<Array<{ key: string; sourceId: string; targetId: string }>>([]);
   const coarsePointer = useMemo(() => window.matchMedia?.('(pointer: coarse)').matches ?? false, []);
-  // The fade-in animation only plays when the page first opens.
+  // The fade-in animation only plays when the page first opens (after the opening animation).
   const [introDone, setIntroDone] = useState(false);
   useEffect(() => {
-    const t = window.setTimeout(() => setIntroDone(true), 2500);
+    const t = window.setTimeout(() => setIntroDone(true), 2500 + splashRemainingMs());
     return () => window.clearTimeout(t);
   }, []);
 

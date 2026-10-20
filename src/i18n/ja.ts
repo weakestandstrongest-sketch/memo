@@ -29,6 +29,8 @@ export const ja = {
   },
 
   topbar: {
+    /** Greeting shown above the wordmark, by time of day. */
+    greeting: (hour: number) => (hour >= 5 && hour < 11 ? 'おはようございます' : hour >= 11 && hour < 17 ? 'こんにちは' : 'こんばんは'),
     starsUnit: '個の星',
     links: (n: number) => `つながり ${n}`,
     filterButton: (active: number) =>
@@ -49,6 +51,7 @@ export const ja = {
     heading: 'カテゴリ',
     groupLabel: 'カテゴリで絞り込む',
     all: 'すべての星',
+    allShort: 'すべて',
     status: (matched: number, total: number) => `${total}個中 ${matched}個が一致`,
   },
 
@@ -83,9 +86,9 @@ export const ja = {
   },
 
   form: {
-    newTitle: '新しい星',
+    newTitle: '新しい星をうむ',
     editTitle: '星を編集',
-    create: '星をつくる',
+    create: '星をうむ',
     save: '保存する',
     titleLabel: 'タイトル',
     titlePlaceholder: 'どんな星ですか？',
@@ -278,6 +281,8 @@ export const ja = {
     focusModeText: '星を選ぶと、つながっている星がそのまわりに集まります（表示だけで、位置は保存されません）。',
     timeSky: '時間帯で空の色を変える',
     timeSkyText: '夜明け・昼・夕方・夜で、宇宙の色が少しずつ変わります。',
+    splash: '開いたときのアニメーション',
+    splashText: 'アプリを開くと、星が生まれて「My Universe」の文字が浮かびます。画面をタップすると飛ばせます。',
     deviceNote: 'これらの設定は、この端末のこのブラウザにだけ保存されます（PC と iPhone で別々です）。',
     saveFailed: '設定を保存できませんでした。プライベートブラウズでは保存できません。',
   },
@@ -315,7 +320,17 @@ export const ja = {
     fitAll: '宇宙全体を表示',
   },
 
-  fab: '星を追加',
+  fab: '星をつくる',
+
+  dock: {
+    label: 'メインメニュー',
+    universe: '宇宙全体を表示',
+    list: '星の一覧',
+    settings: '設定',
+  },
+
+  /** Small note above the dock when stars were born today. */
+  today: (n: number) => `きょう、新しい星が${n < 10 ? `${n}つ` : `${n}個`}生まれました`,
 
   empty: {
     title: 'あなたの宇宙は、最初の星を待っています。',

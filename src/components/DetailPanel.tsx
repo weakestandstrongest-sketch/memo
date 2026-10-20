@@ -105,40 +105,37 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
         </button>
       )}
 
-      <header className="detail-header">
-        <span className="category-badge">
-          <CategoryIcon category={note.category} size={16} />
-          {category.label}
-        </span>
-        {group && (
-          <span className="group-badge" style={{ ['--group-color' as string]: group.color }}>
-            <span className="group-dot" aria-hidden="true" />
-            {group.name}
-          </span>
-        )}
-        {note.sample && <span className="badge badge-muted">{ja.detail.sample}</span>}
-        <button
-          type="button"
-          className={`icon-button detail-pin ${note.pinned ? 'is-pinned' : ''}`}
-          onClick={onTogglePin}
-          aria-pressed={Boolean(note.pinned)}
-          aria-label={note.pinned ? ja.detail.unpin : ja.detail.pin}
-          title={note.pinned ? ja.detail.unpin : ja.detail.pin}
-        >
-          <PinIcon filled={note.pinned} />
-        </button>
-        <button type="button" className="icon-button detail-close" onClick={onClose} aria-label={ja.detail.close}>
-          <CloseIcon />
-        </button>
-      </header>
-
       <div className="detail-scroll">
-        <h2 className="detail-title">{note.title}</h2>
+        <header className="detail-hero">
+          <span className="detail-orb" aria-hidden="true">
+            <CategoryIcon category={note.category} size={34} />
+          </span>
+          <div className="detail-hero-text">
+            <h2 className="detail-title">{note.title}</h2>
+            <div className="detail-chips">
+              <span className="category-badge">
+                <span className="category-dot" aria-hidden="true" />
+                {category.label}
+              </span>
+              {group && (
+                <span className="group-badge" style={{ ['--group-color' as string]: group.color }}>
+                  <span className="group-dot" aria-hidden="true" />
+                  {group.name}
+                </span>
+              )}
+              {note.sample && <span className="badge badge-muted">{ja.detail.sample}</span>}
+            </div>
+          </div>
+          <button type="button" className="icon-button detail-close" onClick={onClose} aria-label={ja.detail.close}>
+            <CloseIcon />
+          </button>
+        </header>
+
         <p className="detail-meta">
           <time dateTime={note.createdAt}>{ja.detail.created(formatDateTime(note.createdAt))}</time>
           {note.updatedAt !== note.createdAt && (
             <>
-              <br />
+              <span aria-hidden="true"> ・ </span>
               <time dateTime={note.updatedAt}>{ja.detail.edited(formatDateTime(note.updatedAt))}</time>
             </>
           )}
@@ -217,13 +214,27 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
           <LinkIcon />
           {ja.detail.connect}
         </button>
-        <button type="button" className="button button-ghost" onClick={onEdit}>
+        <button type="button" className="round-button" onClick={onEdit} aria-label={ja.detail.edit} title={ja.detail.edit}>
           <EditIcon />
-          {ja.detail.edit}
         </button>
-        <button type="button" className="button button-ghost button-danger-text" onClick={onDelete} aria-label={ja.detail.deleteAria} title={ja.detail.deleteAria}>
+        <button
+          type="button"
+          className={`round-button detail-pin ${note.pinned ? 'is-pinned' : ''}`}
+          onClick={onTogglePin}
+          aria-pressed={Boolean(note.pinned)}
+          aria-label={note.pinned ? ja.detail.unpin : ja.detail.pin}
+          title={note.pinned ? ja.detail.unpin : ja.detail.pin}
+        >
+          <PinIcon filled={note.pinned} />
+        </button>
+        <button
+          type="button"
+          className="round-button is-danger"
+          onClick={onDelete}
+          aria-label={ja.detail.deleteAria}
+          title={ja.detail.deleteAria}
+        >
           <TrashIcon />
-          <span className="hide-narrow">{ja.detail.delete}</span>
         </button>
       </footer>
     </aside>

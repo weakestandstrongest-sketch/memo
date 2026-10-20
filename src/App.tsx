@@ -27,7 +27,8 @@ import { SettingsDialog } from './components/SettingsDialog';
 import { Sidebar } from './components/Sidebar';
 import { Toast, type ToastMessage } from './components/Toast';
 import { TopBar } from './components/TopBar';
-import { CloseIcon, FitIcon, HistoryIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from './components/icons';
+import { Dock } from './components/Dock';
+import { CloseIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from './components/icons';
 import { Universe, type Insets, type UniverseHandle } from './components/universe/Universe';
 
 type Dialog =
@@ -46,6 +47,10 @@ type Dialog =
 
 /** Width of the star list on wide screens (keep in sync with .sidebar in styles.css). */
 const SIDEBAR_WIDTH = 320;
+/** Space kept free above the bottom edge for the dock. */
+const DOCK_SPACE = 104;
+/** How long the "stars born today" note stays. */
+const TODAY_NOTE_MS = 7000;
 
 const NOTICE_TEXT: Record<Exclude<StorageNotice, null>, string> = {
   repaired: ja.storageNotice.repaired,
@@ -71,7 +76,7 @@ export default function App({ onLockNow }: AppProps) {
 
   // --- Layout mode ---------------------------------------------------------
   const compact = useMediaQuery('(max-width: 719px)');
-  // Room for the category panel on the left (above the view buttons) — otherwise a popover is used.
+  // Room for the category panel on the left — otherwise the categories are a row of chips under the search.
   const roomyFilters = useMediaQuery('(min-width: 900px) and (min-height: 600px)');
   const touch = useMediaQuery('(pointer: coarse)');
 
@@ -79,7 +84,6 @@ export default function App({ onLockNow }: AppProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [activeCats, setActiveCats] = useState<Set<CategoryId>>(() => new Set());
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   /** "宇宙の歴史" playback: the universe is shown as it was at `time`. */
   const [history, setHistory] = useState<{ start: number; end: number; time: number; playing: boolean } | null>(null);
@@ -166,7 +170,7 @@ export default function App({ onLockNow }: AppProps) {
         sidebarOpen && !compact ? SIDEBAR_WIDTH + 24 : 0,
       ),
       right: detailVisible && !compact && detailBox ? detailBox.width + 24 : 0,
-      bottom: detailVisible && compact && detailBox ? detailBox.height : 24,
+      bottom: detailVisible && compact && detailBox ? detailBox.height : DOCK_SPACE,
     }),
     [topBox, filterBox, detailBox, roomyFilters, compact, detailVisible, sidebarOpen],
   );
@@ -201,7 +205,6 @@ export default function App({ onLockNow }: AppProps) {
 
   const onStarTap = useCallback(
     (id: string) => {
-      setFiltersOpen(false);
       if (history) {
         // While replaying history, a tap just tells when the star was born.
         const note = notesById.get(id);
@@ -223,7 +226,6 @@ export default function App({ onLockNow }: AppProps) {
     setSelectedId(null);
     setConnectSourceId(null);
     setSidebarOpen(false);
-    setFiltersOpen(false);
     universeRef.current?.fitAll(false); // frame the whole (final) universe first
     setHistory({ ...range, time: range.start, playing: true });
   };
@@ -232,7 +234,6 @@ export default function App({ onLockNow }: AppProps) {
   const historyTicks = useMemo(() => data.notes.map((n) => Date.parse(n.createdAt)).sort((a, b) => a - b), [data.notes]);
 
   const onBackgroundTap = useCallback(() => {
-    setFiltersOpen(false);
     if (!connectSourceId) setSelectedId(null);
   }, [connectSourceId]);
 
@@ -253,10 +254,7 @@ export default function App({ onLockNow }: AppProps) {
     },
     [actions, notesById, showToast],
   );
-  const openSidebar = useCallback(() => {
-    setFiltersOpen(false);
-    setSidebarOpen(true);
-  }, []);
+  const openSidebar = useCallback(() => setSidebarOpen(true), []);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   const togglePin = (id: string) => {
@@ -301,13 +299,12 @@ export default function App({ onLockNow }: AppProps) {
         setDialog({ kind: 'create' });
       } else if (e.key === 'Escape') {
         if (connectSourceId) setConnectSourceId(null);
-        else if (filtersOpen) setFiltersOpen(false);
         else setSelectedId(null);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dialog, connectSourceId, filtersOpen]);
+  }, [dialog, connectSourceId]);
 
   // Clear the "new star" highlight after its birth animation.
   useEffect(() => {
@@ -315,6 +312,17 @@ export default function App({ onLockNow }: AppProps) {
     const t = window.setTimeout(() => setNewStarId(null), 2400);
     return () => window.clearTimeout(t);
   }, [newStarId]);
+
+  // "きょう、新しい星が…": stars born today, shown for a moment after the app opens.
+  const [todayCount] = useState(() => {
+    const today = new Date().toDateString();
+    return data.notes.filter((n) => new Date(n.createdAt).toDateString() === today).length;
+  });
+  const [todayNoteOn, setTodayNoteOn] = useState(true);
+  useEffect(() => {
+    const t = window.setTimeout(() => setTodayNoteOn(false), TODAY_NOTE_MS);
+    return () => window.clearTimeout(t);
+  }, []);
 
   const dismissHint = () => {
     setHintVisible(false);
@@ -349,8 +357,10 @@ export default function App({ onLockNow }: AppProps) {
   const editing = dialog?.kind === 'edit' ? notesById.get(dialog.id) : undefined;
   const connecting = dialog?.kind === 'connect' ? notesById.get(dialog.id) : undefined;
   const deleting = dialog?.kind === 'delete' ? notesById.get(dialog.id) : undefined;
-  const showFab = !(compact && detailVisible) && !connectSourceId && !history;
+  const showDock = !(compact && detailVisible) && !connectSourceId && !history;
   const hasOwnNotes = data.notes.some((n) => !n.sample);
+  const showTodayNote =
+    todayNoteOn && todayCount > 0 && !hintVisible && showDock && !selected && !dialog && !sidebarOpen;
   const showReminder =
     isBackupDue(settings.backup, hasOwnNotes, new Date(clock)) &&
     !dialog &&
@@ -367,6 +377,7 @@ export default function App({ onLockNow }: AppProps) {
         touch && 'is-touch',
         detailVisible && (compact ? 'has-sheet' : 'has-side-panel'),
         history && 'is-history',
+        !roomyFilters && 'has-chips',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -388,22 +399,25 @@ export default function App({ onLockNow }: AppProps) {
         focusMode={settings.display.focusMode}
         sky={settings.display.timeSky ? sky : null}
         onDropConnect={onDropConnect}
-        onBackgroundLongPress={(at) => {
-          setFiltersOpen(false);
-          setDialog({ kind: 'create', at });
-        }}
+        onBackgroundLongPress={(at) => setDialog({ kind: 'create', at })}
       />
 
       <TopBar
         ref={topbarRef}
         starCount={data.notes.length}
         linkCount={data.connections.length}
-        showFilterButton={!roomyFilters}
-        activeFilterCount={activeCats.size}
-        filtersOpen={filtersOpen}
-        onToggleFilters={() => setFiltersOpen((v) => !v)}
-        sidebarOpen={sidebarOpen}
-        onToggleSidebar={() => (sidebarOpen ? closeSidebar() : openSidebar())}
+        hour={new Date(clock).getHours()}
+        chips={
+          roomyFilters ? null : (
+            <CategoryFilter
+              variant="chips"
+              active={activeCats}
+              counts={counts}
+              onToggle={toggleCategory}
+              onClear={() => setActiveCats(new Set())}
+            />
+          )
+        }
         search={
           <SearchBox
             ref={searchRef}
@@ -426,7 +440,7 @@ export default function App({ onLockNow }: AppProps) {
         }
       />
 
-      {roomyFilters ? (
+      {roomyFilters && (
         <div ref={filterPanelRef} className="filter-panel glass">
           <CategoryFilter
             variant="panel"
@@ -436,22 +450,6 @@ export default function App({ onLockNow }: AppProps) {
             onClear={() => setActiveCats(new Set())}
           />
         </div>
-      ) : (
-        filtersOpen && (
-          <div
-            id="filter-popover"
-            className="filter-popover glass"
-            style={{ top: insets.top + (filterActive ? 52 : 0) }}
-          >
-            <CategoryFilter
-              variant="popover"
-              active={activeCats}
-              counts={counts}
-              onToggle={toggleCategory}
-              onClear={() => setActiveCats(new Set())}
-            />
-          </div>
-        )
       )}
 
       {filterActive && !connectSourceId && (
@@ -499,43 +497,33 @@ export default function App({ onLockNow }: AppProps) {
         />
       )}
 
-      <div className="view-controls">
-        {!touch && (
-          <>
-            <button type="button" className="icon-button glass" aria-label={ja.view.zoomIn} title={ja.view.zoomIn} onClick={() => universeRef.current?.zoomBy(1.3)}>
-              <ZoomInIcon />
-            </button>
-            <button type="button" className="icon-button glass" aria-label={ja.view.zoomOut} title={ja.view.zoomOut} onClick={() => universeRef.current?.zoomBy(1 / 1.3)}>
-              <ZoomOutIcon />
-            </button>
-          </>
-        )}
-        <button
-          type="button"
-          className={`icon-button glass ${history ? 'is-active' : ''}`}
-          aria-label={ja.history.open}
-          title={ja.history.open}
-          aria-pressed={Boolean(history)}
-          onClick={() => (history ? closeHistory() : openHistory())}
-        >
-          <HistoryIcon />
-        </button>
-        <button
-          type="button"
-          className="icon-button glass"
-          aria-label={ja.view.fitAll}
-          title={ja.view.fitAll}
-          onClick={() => universeRef.current?.fitAll()}
-        >
-          <FitIcon />
-        </button>
-      </div>
+      {!touch && (
+        <div className="view-controls">
+          <button type="button" className="icon-button glass" aria-label={ja.view.zoomIn} title={ja.view.zoomIn} onClick={() => universeRef.current?.zoomBy(1.3)}>
+            <ZoomInIcon />
+          </button>
+          <button type="button" className="icon-button glass" aria-label={ja.view.zoomOut} title={ja.view.zoomOut} onClick={() => universeRef.current?.zoomBy(1 / 1.3)}>
+            <ZoomOutIcon />
+          </button>
+        </div>
+      )}
 
-      {showFab && (
-        <button type="button" className="fab" onClick={() => setDialog({ kind: 'create' })} aria-label={ja.fab}>
-          <PlusIcon />
-          <span className="fab-label">{ja.fab}</span>
-        </button>
+      {showDock && (
+        <Dock
+          sidebarOpen={sidebarOpen}
+          onFitAll={() => universeRef.current?.fitAll()}
+          onToggleSidebar={() => (sidebarOpen ? closeSidebar() : openSidebar())}
+          onCreate={() => setDialog({ kind: 'create' })}
+          onOpenHistory={openHistory}
+          onOpenSettings={() => setDialog({ kind: 'settings' })}
+        />
+      )}
+
+      {showTodayNote && (
+        <p className="today-note" role="status">
+          <span className="today-dot" aria-hidden="true" />
+          {ja.today(todayCount)}
+        </p>
       )}
 
       {showReminder && (

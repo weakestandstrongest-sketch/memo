@@ -127,6 +127,29 @@ export const GalaxyIcon = () => (
     <ellipse cx="12" cy="12" rx="9" ry="4.5" transform="rotate(-25 12 12)" strokeDasharray="2.5 2.5" />
   </Icon>
 );
+/** "宇宙": a planet with its orbit. */
+export const OrbitIcon = () => (
+  <Icon size={22}>
+    <circle cx="12" cy="12" r="4" />
+    <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)" />
+  </Icon>
+);
+/** "一覧": the star list. */
+export const ListIcon = () => (
+  <Icon size={22}>
+    <rect x="4" y="4" width="7" height="7" rx="2" />
+    <rect x="13" y="4" width="7" height="7" rx="2" />
+    <rect x="4" y="13" width="7" height="7" rx="2" />
+    <rect x="13" y="13" width="7" height="7" rx="2" />
+  </Icon>
+);
+export const SettingsIcon = () => (
+  <Icon size={22}>
+    <path d="M5 7h9M18 7h1M5 17h1M10 17h9" />
+    <circle cx="16" cy="7" r="2" />
+    <circle cx="8" cy="17" r="2" />
+  </Icon>
+);
 export const HistoryIcon = () => (
   <Icon>
     <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />

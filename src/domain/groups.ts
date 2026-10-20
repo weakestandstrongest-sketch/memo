@@ -10,7 +10,7 @@ import type { Group, Position, UniverseData } from './types';
 export const GROUP_NAME_MAX = 40;
 
 /** Galaxy colors the user can choose from. */
-export const GROUP_COLORS = ['#8fa8ff', '#ff9ecf', '#6fe0d0', '#ffc27a', '#c4a1ff', '#9be38a'] as const;
+export const GROUP_COLORS = ['#c9b8ff', '#ffaccd', '#9fe8dc', '#ffd59e', '#a8c6ff', '#bfeaa4'] as const;
 
 export function buildGroup(name: string, color: string, now = new Date()): Group {
   return {

@@ -39,6 +39,8 @@ export interface DisplaySettings {
   focusMode: boolean;
   /** The sky color follows the time of day. */
   timeSky: boolean;
+  /** Play the opening animation when the app starts (read early by index.html). */
+  splash: boolean;
 }
 
 export interface Settings {
@@ -51,7 +53,7 @@ export function defaultSettings(now = new Date()): Settings {
   return {
     lock: { enabled: false, hash: '', salt: '', length: 0, autoLockMinutes: 5 },
     backup: { intervalDays: 7, lastBackupAt: null, snoozedUntil: null, firstSeenAt: now.toISOString() },
-    display: { focusMode: true, timeSky: true },
+    display: { focusMode: true, timeSky: true, splash: true },
   };
 }
 
@@ -94,6 +96,7 @@ export function sanitizeSettings(raw: unknown, now = new Date()): Settings {
     display: {
       focusMode: typeof display.focusMode === 'boolean' ? display.focusMode : d.display.focusMode,
       timeSky: typeof display.timeSky === 'boolean' ? display.timeSky : d.display.timeSky,
+      splash: typeof display.splash === 'boolean' ? display.splash : d.display.splash,
     },
   };
 }

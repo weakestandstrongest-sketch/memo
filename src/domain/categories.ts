@@ -23,7 +23,7 @@ export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   ideas: {
     id: 'ideas',
     label: ja.categories.ideas.label,
-    color: '#ffd166',
+    color: '#ffe3a0',
     shape: 'sparkle',
     shapeName: ja.categories.ideas.shapeName,
     description: ja.categories.ideas.description,
@@ -31,7 +31,7 @@ export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   learning: {
     id: 'learning',
     label: ja.categories.learning.label,
-    color: '#4cc9f0',
+    color: '#a5e6ff',
     shape: 'planet',
     shapeName: ja.categories.learning.shapeName,
     description: ja.categories.learning.description,
@@ -39,7 +39,7 @@ export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   goals: {
     id: 'goals',
     label: ja.categories.goals.label,
-    color: '#ff6b9a',
+    color: '#ffb4d0',
     shape: 'star',
     shapeName: ja.categories.goals.shapeName,
     description: ja.categories.goals.description,
@@ -47,7 +47,7 @@ export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   journal: {
     id: 'journal',
     label: ja.categories.journal.label,
-    color: '#b39cff',
+    color: '#d4c6ff',
     shape: 'crescent',
     shapeName: ja.categories.journal.shapeName,
     description: ja.categories.journal.description,
@@ -55,7 +55,7 @@ export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   other: {
     id: 'other',
     label: ja.categories.other.label,
-    color: '#7ee8b5',
+    color: '#b4f2d2',
     shape: 'diamond',
     shapeName: ja.categories.other.shapeName,
     description: ja.categories.other.description,
