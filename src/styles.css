@@ -1138,8 +1138,72 @@ p {
   letter-spacing: 0.04em;
 }
 
-.detail-body.is-empty {
+/* The memo text is a real text field that looks like plain text until tapped */
+.body-editor {
+  position: relative;
+  margin-top: 4px;
+}
+
+.body-editor-field {
+  display: block;
+  width: calc(100% + 28px);
+  margin: 10px -14px 0;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: transparent;
+  font-size: 16px; /* 16px+ keeps iOS from zooming in when the field is tapped */
+  resize: none;
+  overflow: hidden;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: text;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.body-editor-field::placeholder {
   color: var(--text-faint);
+}
+
+.body-editor-field:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.body-editor.is-editing .body-editor-field {
+  min-height: 120px;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(215, 204, 255, 0.35);
+  box-shadow: 0 0 0 3px rgba(138, 104, 240, 0.14);
+}
+
+.body-editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  animation: fade-in 0.2s ease-out;
+}
+
+.body-editor-note {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* Writing on a phone: the sheet fills the space above the keyboard */
+.detail-panel.is-sheet.is-writing {
+  z-index: 21;
+  top: calc(var(--vv-top) + var(--safe-top) + 8px);
+  bottom: auto;
+  height: calc(var(--vv-height) - var(--safe-top) - 8px);
+  max-height: none;
+  border-radius: 24px 24px 0 0;
+  animation: none;
+}
+
+.detail-panel.is-sheet.is-writing .detail-actions {
+  display: none;
 }
 
 .detail-links {

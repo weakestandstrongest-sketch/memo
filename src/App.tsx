@@ -485,6 +485,7 @@ export default function App({ onLockNow }: AppProps) {
           group={selected.groupId ? groupsById.get(selected.groupId) ?? null : null}
           sheet={compact}
           onTogglePin={() => togglePin(selected.id)}
+          onSaveBody={(body) => actions.updateNote(selected.id, { body })}
           onClose={() => setSelectedId(null)}
           onEdit={() => setDialog({ kind: 'edit', id: selected.id })}
           onDelete={() => setDialog({ kind: 'delete', id: selected.id })}

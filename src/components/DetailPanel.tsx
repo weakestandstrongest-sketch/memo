@@ -5,6 +5,7 @@ import type { Group, Note } from '../domain/types';
 import type { LinkedNote } from '../domain/universe';
 import { formatDateTime } from '../utils/format';
 import { ChevronIcon, CloseIcon, EditIcon, LinkIcon, PinIcon, TargetIcon, TrashIcon, UnlinkIcon } from './icons';
+import { InlineBodyEditor } from './InlineBodyEditor';
 import { CategoryIcon } from './universe/CategoryGlyph';
 
 interface DetailPanelProps {
@@ -21,15 +22,19 @@ interface DetailPanelProps {
   onDisconnect: (connectionId: string) => void;
   onOpenNote: (id: string) => void;
   onTogglePin: () => void;
+  /** Saves text typed straight into the memo. */
+  onSaveBody: (body: string) => void;
 }
 
 /** Details of the selected star: a side panel on desktop, a bottom sheet on phones. */
 export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function DetailPanel(
-  { note, links, group, sheet, onClose, onEdit, onDelete, onConnect, onDisconnect, onOpenNote, onTogglePin },
+  { note, links, group, sheet, onClose, onEdit, onDelete, onConnect, onDisconnect, onOpenNote, onTogglePin, onSaveBody },
   ref,
 ) {
   const category = CATEGORIES[note.category];
   const [expanded, setExpanded] = useState(false);
+  /** Typing into the memo: on phones the sheet then fills the space above the keyboard. */
+  const [writing, setWriting] = useState(false);
   // Connected stars whose memo is shown inline (several can be open at once).
   const [openLinks, setOpenLinks] = useState<Set<string>>(() => new Set());
   const lastOpened = useRef<string | null>(null);
@@ -79,7 +84,9 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
     } else if (d.dy < -40) setExpanded(true);
   };
 
-  const classes = ['detail-panel', sheet ? 'is-sheet' : 'is-side', expanded && 'is-expanded'].filter(Boolean).join(' ');
+  const classes = ['detail-panel', sheet ? 'is-sheet' : 'is-side', expanded && 'is-expanded', writing && 'is-writing']
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <aside
@@ -141,11 +148,7 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
           )}
         </p>
 
-        {note.body ? (
-          <div className="detail-body">{note.body}</div>
-        ) : (
-          <p className="detail-body is-empty">{ja.detail.emptyBody}</p>
-        )}
+        <InlineBodyEditor body={note.body} onSave={onSaveBody} onEditingChange={setWriting} />
 
         <section className="detail-links" aria-labelledby="links-heading">
           <h3 id="links-heading" className="section-title">
