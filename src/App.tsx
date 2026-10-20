@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_IDS, type CategoryId, type UniverseData } from './domain/types';
-import { CONNECT_ERROR_MESSAGES, linkedNotes, matchesQuery } from './domain/universe';
+import { linkedNotes, matchesQuery } from './domain/universe';
+import { ja } from './i18n/ja';
 import { useUniverseStore, type StorageNotice } from './state/useUniverseStore';
-import { downloadBackup, readBackupFile } from './storage/backupFile';
+import { exportBackup, readBackupFile } from './storage/backupFile';
 import { readPref, writePref } from './storage/preferences';
 import { useElementRect } from './hooks/useElementRect';
 import { useMediaQuery } from './hooks/useMediaQuery';
@@ -30,10 +31,10 @@ type Dialog =
   | null;
 
 const NOTICE_TEXT: Record<Exclude<StorageNotice, null>, string> = {
-  repaired: 'Some saved data was damaged and has been repaired.',
-  corrupt: "Your saved universe couldn't be read. A backup copy was kept in this browser; showing sample stars.",
-  unavailable: "This browser is blocking storage, so changes won't be saved after you close the page.",
-  'save-failed': "Couldn't save your latest change — browser storage may be full.",
+  repaired: ja.storageNotice.repaired,
+  corrupt: ja.storageNotice.corrupt,
+  unavailable: ja.storageNotice.unavailable,
+  'save-failed': ja.storageNotice.saveFailed,
 };
 
 export default function App() {
@@ -133,12 +134,12 @@ export default function App() {
       if (result.ok) {
         const a = notesById.get(sourceId)?.title ?? '';
         const b = notesById.get(targetId)?.title ?? '';
-        showToast(`Connected “${a}” with “${b}”`);
+        showToast(ja.toast.connected(a, b));
         setConnectSourceId(null);
         setDialog(null);
         setSelectedId(sourceId);
       } else {
-        showToast(CONNECT_ERROR_MESSAGES[result.reason], 'error');
+        showToast(ja.connect.errors[result.reason], 'error');
       }
     },
     [actions, notesById, showToast],
@@ -213,7 +214,7 @@ export default function App() {
       const imported = await readBackupFile(file);
       setDialog({ kind: 'import', data: imported });
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not read that file.', 'error');
+      showToast(err instanceof Error ? err.message : ja.backup.errors.readFailed, 'error');
     }
   };
 
@@ -270,8 +271,12 @@ export default function App() {
             onFitAll={() => universeRef.current?.fitAll()}
             onShowHelp={() => setDialog({ kind: 'help' })}
             onExport={() => {
-              downloadBackup(data);
-              showToast('Backup file downloaded.');
+              exportBackup(data)
+                .then((result) => {
+                  if (result === 'downloaded') showToast(ja.toast.exported);
+                  else if (result === 'shared') showToast(ja.toast.shared);
+                })
+                .catch(() => showToast(ja.backup.errors.exportFailed, 'error'));
             }}
             onImportFile={importFile}
           />
@@ -309,10 +314,10 @@ export default function App() {
       {filterActive && !connectSourceId && (
         <div className="filter-status glass" style={{ top: insets.top }} role="status">
           <span>
-            <strong>{matches.length}</strong> of {data.notes.length} stars match
+            {ja.filter.status(matches.length, data.notes.length)}
           </span>
           <button type="button" className="button button-small" onClick={clearFilters}>
-            Clear
+            {ja.common.clear}
           </button>
         </div>
       )}
@@ -320,10 +325,12 @@ export default function App() {
       {connectSource && (
         <div className="connect-banner glass" style={{ top: insets.top }} role="status">
           <span>
-            Tap a star to connect it with <strong>{connectSource.title}</strong>
+            {ja.connectBanner.before}
+            <strong>{connectSource.title}</strong>
+            {ja.connectBanner.after}
           </span>
           <button type="button" className="button button-small" onClick={() => setConnectSourceId(null)}>
-            Cancel
+            {ja.common.cancel}
           </button>
         </div>
       )}
@@ -341,7 +348,7 @@ export default function App() {
           onConnect={() => setDialog({ kind: 'connect', id: selected.id })}
           onDisconnect={(connectionId) => {
             actions.disconnect(connectionId);
-            showToast('Connection removed.');
+            showToast(ja.toast.linkRemoved);
           }}
           onOpenNote={(id) => openStar(id, true)}
         />
@@ -350,10 +357,10 @@ export default function App() {
       <div className="view-controls">
         {!touch && (
           <>
-            <button type="button" className="icon-button glass" aria-label="Zoom in" onClick={() => universeRef.current?.zoomBy(1.3)}>
+            <button type="button" className="icon-button glass" aria-label={ja.view.zoomIn} title={ja.view.zoomIn} onClick={() => universeRef.current?.zoomBy(1.3)}>
               <ZoomInIcon />
             </button>
-            <button type="button" className="icon-button glass" aria-label="Zoom out" onClick={() => universeRef.current?.zoomBy(1 / 1.3)}>
+            <button type="button" className="icon-button glass" aria-label={ja.view.zoomOut} title={ja.view.zoomOut} onClick={() => universeRef.current?.zoomBy(1 / 1.3)}>
               <ZoomOutIcon />
             </button>
           </>
@@ -361,8 +368,8 @@ export default function App() {
         <button
           type="button"
           className="icon-button glass"
-          aria-label="Show whole universe"
-          title="Show whole universe"
+          aria-label={ja.view.fitAll}
+          title={ja.view.fitAll}
           onClick={() => universeRef.current?.fitAll()}
         >
           <FitIcon />
@@ -370,20 +377,18 @@ export default function App() {
       </div>
 
       {showFab && (
-        <button type="button" className="fab" onClick={() => setDialog({ kind: 'create' })} aria-label="Add star">
+        <button type="button" className="fab" onClick={() => setDialog({ kind: 'create' })} aria-label={ja.fab}>
           <PlusIcon />
-          <span className="fab-label">Add star</span>
+          <span className="fab-label">{ja.fab}</span>
         </button>
       )}
 
       {hintVisible && !selected && !connectSourceId && (
         <div className="hint glass">
           <span>
-            {touch
-              ? 'Tap a star · Hold to move it · Pinch to zoom'
-              : 'Click a star to open it · Drag to move · Scroll to zoom'}
+            {touch ? ja.hint.touch : ja.hint.mouse}
           </span>
-          <button type="button" className="icon-button" aria-label="Dismiss tip" onClick={dismissHint}>
+          <button type="button" className="icon-button" aria-label={ja.hint.dismiss} onClick={dismissHint}>
             <CloseIcon />
           </button>
         </div>
@@ -391,9 +396,9 @@ export default function App() {
 
       {data.notes.length === 0 && (
         <div className="empty-universe">
-          <p className="empty-universe-title">Your universe is waiting for its first star.</p>
+          <p className="empty-universe-title">{ja.empty.title}</p>
           <button type="button" className="button button-primary" onClick={() => setDialog({ kind: 'create' })}>
-            <PlusIcon /> Create your first star
+            <PlusIcon /> {ja.empty.button}
           </button>
         </div>
       )}
@@ -411,7 +416,7 @@ export default function App() {
             setDialog(null);
             setNewStarId(note.id);
             openStar(note.id, false);
-            showToast('A new star is born ✦');
+            showToast(ja.toast.created);
           }}
         />
       )}
@@ -423,7 +428,7 @@ export default function App() {
           onSubmit={(values) => {
             actions.updateNote(editing.id, values);
             setDialog(null);
-            showToast('Changes saved.');
+            showToast(ja.toast.saved);
           }}
         />
       )}
@@ -443,42 +448,36 @@ export default function App() {
 
       {deleting && (
         <ConfirmDialog
-          title="Delete this star?"
-          message={
-            <p>
-              “{deleting.title}” and its {linkedNotes(data, deleting.id).length} connection(s) will be removed. This
-              can’t be undone.
-            </p>
-          }
-          confirmLabel="Delete star"
+          title={ja.deleteDialog.title}
+          message={<p>{ja.deleteDialog.message(deleting.title, linkedNotes(data, deleting.id).length)}</p>}
+          confirmLabel={ja.deleteDialog.confirm}
           danger
           onCancel={() => setDialog(null)}
           onConfirm={() => {
             actions.deleteNote(deleting.id);
             setDialog(null);
             setSelectedId(null);
-            showToast('Star deleted.');
+            showToast(ja.toast.deleted);
           }}
         />
       )}
 
       {dialog?.kind === 'import' && (
         <ConfirmDialog
-          title="Import backup?"
+          title={ja.importDialog.title}
           message={
             <p>
-              Replace your current universe ({data.notes.length} stars) with the backup ({dialog.data.notes.length}{' '}
-              stars, {dialog.data.connections.length} connections)?
+              {ja.importDialog.message(data.notes.length, dialog.data.notes.length, dialog.data.connections.length)}
             </p>
           }
-          confirmLabel="Replace universe"
+          confirmLabel={ja.importDialog.confirm}
           danger
           onCancel={() => setDialog(null)}
           onConfirm={() => {
             actions.replaceAll(dialog.data);
             setDialog(null);
             setSelectedId(null);
-            showToast('Backup imported.');
+            showToast(ja.toast.imported);
             window.setTimeout(() => universeRef.current?.fitAll(), 50);
           }}
         />

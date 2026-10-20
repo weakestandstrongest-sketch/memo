@@ -1,0 +1,15 @@
+{
+  "name": "My Universe",
+  "short_name": "My Universe",
+  "description": "メモやアイデアを星として宇宙に浮かべる、あなただけのノートアプリ。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#05060f",
+  "theme_color": "#05060f",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

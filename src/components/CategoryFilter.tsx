@@ -1,4 +1,5 @@
 import { CATEGORY_LIST } from '../domain/categories';
+import { ja } from '../i18n/ja';
 import type { CategoryId } from '../domain/types';
 import { CategoryIcon } from './universe/CategoryGlyph';
 
@@ -14,8 +15,8 @@ interface CategoryFilterProps {
 export function CategoryFilter({ active, counts, onToggle, onClear, variant }: CategoryFilterProps) {
   const allActive = active.size === 0;
   return (
-    <div className={`category-filter is-${variant}`} role="group" aria-label="Filter by category">
-      {variant === 'panel' && <h2 className="section-title">Categories</h2>}
+    <div className={`category-filter is-${variant}`} role="group" aria-label={ja.filter.groupLabel}>
+      {variant === 'panel' && <h2 className="section-title">{ja.filter.heading}</h2>}
       <button
         type="button"
         className={`filter-chip ${allActive ? 'is-on' : ''}`}
@@ -23,7 +24,7 @@ export function CategoryFilter({ active, counts, onToggle, onClear, variant }: C
         onClick={onClear}
       >
         <span className="filter-all-dot" aria-hidden="true" />
-        <span className="filter-label">All stars</span>
+        <span className="filter-label">{ja.filter.all}</span>
       </button>
       {CATEGORY_LIST.map((c) => {
         const on = active.has(c.id);

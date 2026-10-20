@@ -22,11 +22,14 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { CATEGORY_LIST } from '../../domain/categories';
+import { ja } from '../../i18n/ja';
 import { boundsOf } from '../../domain/layout';
 import type { Position, UniverseData } from '../../domain/types';
 import { degreeMap, neighborIds } from '../../domain/universe';
 import { StarField, Twinkles } from './StarField';
-import { StarNode, type StarEmphasis } from './StarNode';
+import { displayWidth, truncateByWidth } from '../../utils/format';
+import { pickVisibleLabels, type LabelCandidate } from './labels';
+import { MAX_LABEL_WIDTH, StarNode, type StarEmphasis } from './StarNode';
 
 export interface View {
   /** Screen position (px) of the universe origin. */
@@ -200,9 +203,15 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         setView({ x: f.x, y: f.y, k: 1 });
         return;
       }
-      const pad = 70;
+      // Screen-space margins: wide enough for star labels at the left/right edges.
+      const padX = Math.min(100, availW * 0.22);
+      const padY = 60;
       const k = clampZoom(
-        Math.min(1.3, availW / (b.maxX - b.minX + pad * 2), availH / (b.maxY - b.minY + pad * 2)),
+        Math.min(
+          1.3,
+          (availW - padX * 2) / Math.max(1, b.maxX - b.minX),
+          (availH - padY * 2) / Math.max(1, b.maxY - b.minY),
+        ),
       );
       const center = { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
       if (animate) animateTo(center, k);
@@ -578,9 +587,35 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
   // Stars shrink a little less than the universe when zooming out, so they stay visible.
   const starScale = Math.pow(view.k, -0.55);
   const minHitPx = coarsePointer ? 22 : 12;
-  const labelsVisible = view.k >= 0.38;
   // Labels never get smaller than ~10px on screen.
   const labelSize = Math.max(11, 10.5 / (view.k * starScale));
+
+  // Which labels fit without overlapping (recomputed on zoom or when stars move).
+  const visibleLabels = useMemo(() => {
+    const k = view.k;
+    const glyphToScreen = starScale * k;
+    const fontPx = labelSize * glyphToScreen;
+    const rank: Record<StarEmphasis, number> = { selected: 0, neighbor: 1, match: 2, normal: 3, faded: 4, dimmed: 9 };
+    const candidates: LabelCandidate[] = [];
+    for (const note of data.notes) {
+      const pos = data.layout[note.id];
+      const emphasis = emphasisOf(note.id);
+      if (!pos || emphasis === 'dimmed') continue;
+      const degree = degrees.get(note.id) ?? 0;
+      const size = starSize(degree, note.body.length);
+      candidates.push({
+        id: note.id,
+        x: pos.x * k,
+        top: pos.y * k + (size * 1.75 + 3) * glyphToScreen,
+        width: displayWidth(truncateByWidth(note.title, MAX_LABEL_WIDTH)) * fontPx * 0.52 + 4,
+        height: fontPx * 1.3,
+        priority: rank[emphasis],
+        degree,
+      });
+    }
+    return pickVisibleLabels(candidates);
+    // emphasisOf only depends on the values listed here.
+  }, [data.notes, data.layout, degrees, view.k, starScale, labelSize, focusId, matchIds, neighbors]);
   const categoryOf = useMemo(() => new Map(data.notes.map((n) => [n.id, n.category])), [data.notes]);
 
   // Selected / hovered stars are drawn last so they sit on top.
@@ -608,7 +643,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         height={size.h}
         style={{ cursor }}
         role="application"
-        aria-label="Your universe. Each star is a note."
+        aria-label={ja.app.universeLabel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={(e) => endPointer(e, false)}
@@ -672,12 +707,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
                   scale={starScale}
                   hitRadius={Math.max(size + 6, minHitPx / (view.k * starScale))}
                   emphasis={emphasis}
-                  showLabel={
-                    emphasis === 'selected' ||
-                    emphasis === 'neighbor' ||
-                    emphasis === 'match' ||
-                    (labelsVisible && emphasis !== 'dimmed')
-                  }
+                  showLabel={visibleLabels.has(note.id)}
                   hovered={hoverId === note.id}
                   lifted={liftedId === note.id}
                   isNew={newStarId === note.id}

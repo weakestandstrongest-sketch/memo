@@ -1,6 +1,8 @@
 import { memo, type KeyboardEvent } from 'react';
+import { ja } from '../../i18n/ja';
 import { CATEGORIES } from '../../domain/categories';
 import type { Note } from '../../domain/types';
+import { truncateByWidth } from '../../utils/format';
 import { Glyph } from './CategoryGlyph';
 
 export type StarEmphasis =
@@ -40,7 +42,8 @@ interface StarNodeProps {
   onKeyActivate: (id: string) => void;
 }
 
-const MAX_LABEL = 30;
+/** Label length in half-width characters (Japanese characters count as 2). */
+export const MAX_LABEL_WIDTH = 30;
 
 export const StarNode = memo(function StarNode({
   note,
@@ -60,7 +63,7 @@ export const StarNode = memo(function StarNode({
   onKeyActivate,
 }: StarNodeProps) {
   const category = CATEGORIES[note.category];
-  const label = note.title.length > MAX_LABEL ? note.title.slice(0, MAX_LABEL - 1) + '…' : note.title;
+  const label = truncateByWidth(note.title, MAX_LABEL_WIDTH);
 
   const onKeyDown = (e: KeyboardEvent<SVGGElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -86,7 +89,7 @@ export const StarNode = memo(function StarNode({
       data-note-id={note.id}
       role="button"
       tabIndex={0}
-      aria-label={`${note.title} — ${category.label} (${category.shapeName})`}
+      aria-label={ja.star.ariaLabel(note.title, category.label, category.shapeName)}
       aria-pressed={emphasis === 'selected'}
       onKeyDown={onKeyDown}
       style={{ ['--star-color' as string]: category.color, ['--intro-delay' as string]: `${Math.min(introIndex, 40) * 35}ms` }}

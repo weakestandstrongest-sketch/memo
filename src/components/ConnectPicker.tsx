@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ja } from '../i18n/ja';
 import { CATEGORIES } from '../domain/categories';
 import type { Note, UniverseData } from '../domain/types';
 import { matchesQuery, neighborIds } from '../domain/universe';
@@ -28,7 +29,7 @@ export function ConnectPicker({ source, data, onPick, onPickInUniverse, onClose 
           // Not-yet-connected stars first, then alphabetical.
           const ca = connected.has(a.id) ? 1 : 0;
           const cb = connected.has(b.id) ? 1 : 0;
-          return ca - cb || a.title.localeCompare(b.title);
+          return ca - cb || a.title.localeCompare(b.title, 'ja');
         }),
     [data.notes, source.id, query, connected],
   );
@@ -36,13 +37,15 @@ export function ConnectPicker({ source, data, onPick, onPickInUniverse, onClose 
   const others = data.notes.length - 1;
 
   return (
-    <Modal title="Connect star" onClose={onClose} className="connect-picker">
+    <Modal title={ja.connect.title} onClose={onClose} className="connect-picker">
       <p className="picker-intro">
-        Link <strong>{source.title}</strong> to another star.
+        {ja.connect.introBefore}
+        <strong>{source.title}</strong>
+        {ja.connect.introAfter}
       </p>
 
       {others === 0 ? (
-        <p className="empty-text">Create another star first, then you can connect them.</p>
+        <p className="empty-text">{ja.connect.needAnother}</p>
       ) : (
         <>
           <div className="picker-tools">
@@ -50,19 +53,19 @@ export function ConnectPicker({ source, data, onPick, onPickInUniverse, onClose 
               className="input"
               type="search"
               data-autofocus
-              placeholder="Find a star…"
-              aria-label="Find a star to connect"
+              placeholder={ja.connect.searchPlaceholder}
+              aria-label={ja.connect.searchAria}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               enterKeyHint="search"
             />
             <button type="button" className="button button-ghost picker-universe" onClick={onPickInUniverse}>
               <TargetIcon />
-              Tap a star in the universe
+              {ja.connect.pickInUniverse}
             </button>
           </div>
 
-          <ul className="picker-list" aria-label="Stars you can connect to">
+          <ul className="picker-list" aria-label={ja.connect.listLabel}>
             {candidates.map((n) => {
               const isConnected = connected.has(n.id);
               return (
@@ -78,12 +81,12 @@ export function ConnectPicker({ source, data, onPick, onPickInUniverse, onClose 
                       <span className="picker-item-title">{n.title}</span>
                       <span className="picker-item-meta">{CATEGORIES[n.category].label}</span>
                     </span>
-                    {isConnected && <span className="badge">Connected</span>}
+                    {isConnected && <span className="badge">{ja.connect.alreadyConnected}</span>}
                   </button>
                 </li>
               );
             })}
-            {candidates.length === 0 && <li className="empty-text">No stars match “{query}”.</li>}
+            {candidates.length === 0 && <li className="empty-text">{ja.connect.noMatch(query)}</li>}
           </ul>
         </>
       )}

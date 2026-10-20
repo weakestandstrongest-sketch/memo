@@ -1,4 +1,5 @@
 import { forwardRef, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { ja } from '../i18n/ja';
 import { CATEGORIES } from '../domain/categories';
 import type { Note } from '../domain/types';
 import type { LinkedNote } from '../domain/universe';
@@ -57,7 +58,7 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
     <aside
       ref={ref}
       className={classes}
-      aria-label={`Star details: ${note.title}`}
+      aria-label={ja.detail.ariaLabel(note.title)}
       style={{
         ['--cat-color' as string]: category.color,
         ...(dragOffset ? { transform: `translateY(${dragOffset}px)`, transition: 'none' } : {}),
@@ -67,7 +68,7 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
         <button
           type="button"
           className="sheet-handle"
-          aria-label={expanded ? 'Show less' : 'Show more'}
+          aria-label={expanded ? ja.detail.sheetCollapse : ja.detail.sheetExpand}
           onPointerDown={onHandleDown}
           onPointerMove={onHandleMove}
           onPointerUp={onHandleUp}
@@ -82,8 +83,8 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
           <CategoryIcon category={note.category} size={16} />
           {category.label}
         </span>
-        {note.sample && <span className="badge badge-muted">Sample</span>}
-        <button type="button" className="icon-button detail-close" onClick={onClose} aria-label="Close details">
+        {note.sample && <span className="badge badge-muted">{ja.detail.sample}</span>}
+        <button type="button" className="icon-button detail-close" onClick={onClose} aria-label={ja.detail.close}>
           <CloseIcon />
         </button>
       </header>
@@ -91,11 +92,11 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
       <div className="detail-scroll">
         <h2 className="detail-title">{note.title}</h2>
         <p className="detail-meta">
-          <time dateTime={note.createdAt}>Created {formatDateTime(note.createdAt)}</time>
+          <time dateTime={note.createdAt}>{ja.detail.created(formatDateTime(note.createdAt))}</time>
           {note.updatedAt !== note.createdAt && (
             <>
               <br />
-              <time dateTime={note.updatedAt}>Edited {formatDateTime(note.updatedAt)}</time>
+              <time dateTime={note.updatedAt}>{ja.detail.edited(formatDateTime(note.updatedAt))}</time>
             </>
           )}
         </p>
@@ -103,15 +104,15 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
         {note.body ? (
           <div className="detail-body">{note.body}</div>
         ) : (
-          <p className="detail-body is-empty">No note text yet.</p>
+          <p className="detail-body is-empty">{ja.detail.emptyBody}</p>
         )}
 
         <section className="detail-links" aria-labelledby="links-heading">
           <h3 id="links-heading" className="section-title">
-            Connected stars <span className="count">{links.length}</span>
+            {ja.detail.linksHeading} <span className="count">{links.length}</span>
           </h3>
           {links.length === 0 ? (
-            <p className="empty-text">Not connected yet. Link it to a related idea.</p>
+            <p className="empty-text">{ja.detail.noLinks}</p>
           ) : (
             <ul className="link-list">
               {links.map(({ connection, note: other }) => (
@@ -124,8 +125,8 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
                     type="button"
                     className="icon-button link-remove"
                     onClick={() => onDisconnect(connection.id)}
-                    aria-label={`Remove connection to ${other.title}`}
-                    title="Remove connection"
+                    aria-label={ja.detail.removeLink(other.title)}
+                    title={ja.detail.removeLinkTooltip}
                   >
                     <UnlinkIcon />
                   </button>
@@ -139,15 +140,15 @@ export const DetailPanel = forwardRef<HTMLElement, DetailPanelProps>(function De
       <footer className="detail-actions">
         <button type="button" className="button button-primary" onClick={onConnect}>
           <LinkIcon />
-          Connect star
+          {ja.detail.connect}
         </button>
         <button type="button" className="button button-ghost" onClick={onEdit}>
           <EditIcon />
-          Edit
+          {ja.detail.edit}
         </button>
-        <button type="button" className="button button-ghost button-danger-text" onClick={onDelete} aria-label="Delete star">
+        <button type="button" className="button button-ghost button-danger-text" onClick={onDelete} aria-label={ja.detail.deleteAria} title={ja.detail.deleteAria}>
           <TrashIcon />
-          <span className="hide-narrow">Delete</span>
+          <span className="hide-narrow">{ja.detail.delete}</span>
         </button>
       </footer>
     </aside>

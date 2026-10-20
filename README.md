@@ -1,169 +1,325 @@
 # My Universe
 
-*Build your own universe of ideas.*
+**あなたのアイデアで、あなただけの宇宙を。**
 
-My Universe is a note-taking app where each note is a **star** in your own personal universe.
-Related ideas are joined by lines, so you can explore your knowledge as a map of space instead of folders and lists.
+My Universe は、メモやアイデアを「星」として宇宙に浮かべるノートアプリです。
+関係のあるアイデア同士を線でつなぎ、フォルダや一覧ではなく「宇宙の地図」として自分の知識を眺められます。
 
-- **One note = one star.** Creating a note makes a new star appear with a short "birth" animation.
-- **Categories have their own color *and* shape:** Ideas ✦ (gold sparkle), Learning (blue ringed planet),
-  Goals ★ (pink star), Journal ☾ (purple crescent), Other ◆ (green diamond).
-- **Lines are connections you choose** between related stars.
-- **Everything is saved in your browser** (localStorage) and is still there after a reload.
+- **メモ 1 件 = 星 1 つ。** メモをつくると、新しい星が生まれるアニメーションとともに宇宙に現れます。
+- **カテゴリごとに色と形が違います：** アイデア ✦（金色のきらめき）、学び（青い輪のある惑星）、
+  目標 ★（ピンクの星）、日記 ☾（紫の三日月）、その他 ◆（緑のひし形）
+- **線は、あなたが選んだつながり** です。
+- **データはブラウザの中（localStorage）に保存** され、ページを再読み込みしても残ります。
 
-It runs in desktop browsers (Chrome / Edge on Windows) and on iPhone Safari. There is nothing to install on the phone.
+Windows の Chrome / Edge と iPhone の Safari で動きます。iPhone にアプリをインストールする必要はありません。
 
 ---
 
-## 1. Requirements
+## 目次
 
-- [Node.js](https://nodejs.org/) **20.19 or newer** (22 LTS recommended). Check with `node -v`.
+1. [公開 URL（インターネットから使う）](#1-公開-urlインターネットから使う)
+2. [初めて公開するときの設定（1 回だけ）](#2-初めて公開するときの設定1-回だけ)
+3. [コードを変更したあと、公開サイトを更新する方法](#3-コードを変更したあと公開サイトを更新する方法)
+4. [iPhone で使う](#4-iphone-で使う)
+5. [データの保存とバックアップ（PC ⇄ iPhone のデータ移行）](#5-データの保存とバックアップpc--iphone-のデータ移行)
+6. [使い方](#6-使い方)
+7. [自分の PC で動かす（開発用）](#7-自分の-pc-で動かす開発用)
+8. [困ったとき（トラブルシューティング）](#8-困ったときトラブルシューティング)
+9. [プロジェクトの構成（開発者向け）](#9-プロジェクトの構成開発者向け)
 
-## 2. Install and start (on your PC)
+---
+
+## 1. 公開 URL（インターネットから使う）
+
+このアプリは **GitHub Pages**（GitHub が提供する無料の Web サイト公開サービス、HTTPS 対応）で公開します。
+
+**公開 URL： https://weakestandstrongest-sketch.github.io/memo/**
+
+- 自宅の Wi-Fi でも、外出先の Wi-Fi でも、モバイルデータ通信でも、この URL を開けば使えます。
+- 料金はかかりません（公開リポジトリの GitHub Pages は無料です）。
+- サーバーやデータベースは使っていません。データは各端末のブラウザに保存されます（[5 章](#5-データの保存とバックアップpc--iphone-のデータ移行)）。
+
+> **なぜ GitHub Pages？**
+> コードがすでに GitHub にあるので、新しいアカウント登録や外部サービスとの連携が不要で、いちばん手順が少ないためです。
+> コードを GitHub に送る（push する）だけで、自動的にサイトが更新されます。
+
+---
+
+## 2. 初めて公開するときの設定（1 回だけ）
+
+公開の仕組み（`.github/workflows/deploy.yml`）はリポジトリに入っています。
+ただし、GitHub Pages を **オンにする操作だけは、リポジトリの持ち主（あなた）が GitHub の画面で行う必要があります**。
+
+### 手順
+
+1. ブラウザで GitHub にログインし、次のページを開きます。
+   **https://github.com/weakestandstrongest-sketch/memo/settings/pages**
+   （リポジトリのページ → 上部の **Settings（設定）** → 左メニューの **Pages**）
+2. 「**Build and deployment**」の「**Source**」のプルダウンで **「GitHub Actions」** を選びます。
+   （選ぶだけで自動保存されます。「Deploy from a branch」ではありません）
+3. 次に、公開作業をもう一度動かします。
+   1. リポジトリ上部の **Actions** タブを開きます。
+   2. 左側の **「Deploy to GitHub Pages」** をクリックします。
+   3. 右側の **「Run workflow」** ボタン → 緑の **「Run workflow」** を押します。
+      （ブランチは初期表示のままで大丈夫です）
+4. 1〜3 分ほど待つと、実行結果に緑のチェック ✅ が付きます。
+   `deploy` の欄に表示される URL（https://weakestandstrongest-sketch.github.io/memo/）を開くと、アプリが表示されます。
+
+> 設定前に自動実行された公開作業は「Pages が有効になっていない」ため ❌ 失敗になりますが、問題ありません。
+> 上の手順 3 でやり直せば成功します。
+
+---
+
+## 3. コードを変更したあと、公開サイトを更新する方法
+
+公開されるのは、リポジトリの **デフォルトブランチ**（現在は `claude/keen-dirac-43nys7`）の内容です。
+このブランチに変更を push（送信）すると、GitHub Actions が自動で次の処理を行います。
+
+1. 型チェック（`npm run typecheck`）
+2. テスト（`npm test`）
+3. ビルド（公開用ファイルの作成）
+4. GitHub Pages への公開（2〜3 分ほど）
+
+**どれかが失敗した場合は公開されず、前のバージョンがそのまま表示され続けます**（壊れたサイトが公開されることはありません）。
+
+### 方法 A：Claude Code に頼む（いちばん簡単）
+
+「〇〇を変更して、公開サイトに反映して」と依頼すれば、変更・確認・push まで行います。
+
+### 方法 B：Windows で自分で更新する（GitHub Desktop を使う）
+
+1. [GitHub Desktop](https://desktop.github.com/) をインストールしてログインします。
+2. **File → Clone repository** で `weakestandstrongest-sketch/memo` を選び、PC にコピーします。
+3. ファイルを編集します（例：文言を変えるなら `src/i18n/ja.ts`）。
+4. 変更を確認したい場合は、[7 章](#7-自分の-pc-で動かす開発用) の手順で PC 上で動かします。
+5. GitHub Desktop の左下に変更内容の説明（例：「ボタンの文言を変更」）を書き、**Commit to …** を押します。
+6. 上部の **Push origin** を押します。
+7. GitHub の **Actions** タブで、実行中の「Deploy to GitHub Pages」が ✅ になるのを待ちます。
+8. iPhone や PC で公開 URL を開き直します。古い表示のままなら、ページを再読み込みしてください。
+
+### 方法 C：コマンドで更新する
 
 ```bash
-npm install      # first time only: downloads the libraries
-npm run dev      # starts the development server
+git add -A
+git commit -m "変更内容の説明"
+git push
 ```
 
-The terminal prints something like:
+---
+
+## 4. iPhone で使う
+
+1. iPhone の **Safari** で **https://weakestandstrongest-sketch.github.io/memo/** を開きます。
+2. （おすすめ）画面下の **共有ボタン（□↑）→「ホーム画面に追加」** を選ぶと、アプリのようにアイコンから起動できます。
+
+> ⚠️ **注意：Safari で開いた場合と、ホーム画面のアイコンから開いた場合では、保存されるデータが別々になります**（iOS の仕様）。
+> どちらか一方に決めて使うのがおすすめです。もう一方にデータを移すときは、[5 章](#5-データの保存とバックアップpc--iphone-のデータ移行) のバックアップ機能を使ってください。
+
+---
+
+## 5. データの保存とバックアップ（PC ⇄ iPhone のデータ移行）
+
+### データはどこに保存される？
+
+- メモ・星の位置・つながりは、**その端末の、そのブラウザの中（localStorage）だけ** に保存されます。
+- **PC と iPhone のデータは自動では同期されません。** PC で作った星は、そのままでは iPhone に表示されません。
+- 同じ端末でも、ブラウザが違えば（Chrome と Edge など）データは別々です。
+- 開く URL が違ってもデータは別々です（公開 URL と、開発用の `http://localhost:5173` など）。
+- インターネット上のサーバーにはデータを送りません。
+
+### データが消えることがあるケース
+
+- ブラウザの「履歴とWebサイトデータを消去」を行ったとき
+- プライベートブラウズ（シークレットモード）で使っていたとき（ページを閉じると消えます）
+- iPhone の Safari では、**しばらく（Safari を使った日数で 7 日間）このサイトを開かないと、保存データが削除されることがあります**（Safari のプライバシー機能）。
+  ホーム画面に追加したアプリは、そのアプリを使った日数で数えられるため、普段から使っていれば消えにくくなります。
+
+**大切なデータは、ときどきバックアップを書き出しておいてください。**
+
+### バックアップの書き出し（エクスポート）
+
+画面右上の **「…」（メニュー）→「バックアップを書き出す（.json）」**
+
+- **PC（Chrome / Edge）**：`my-universe-年-月-日.json` というファイルが「ダウンロード」フォルダに保存されます。
+- **iPhone**：共有メニューが開きます。
+  - **「"ファイル"に保存」** で iPhone 内や iCloud Drive に保存
+  - **AirDrop**、メール、メッセージなどで PC に送ることもできます
+
+### バックアップの読み込み（インポート）
+
+画面右上の **「…」（メニュー）→「バックアップを読み込む…」** → 書き出した `.json` ファイルを選びます。
+確認画面で **「置き換える」** を押すと、**いまの宇宙がバックアップの内容に置き換わります**（追加ではありません）。
+
+### 例：PC のデータを iPhone に移す
+
+1. PC で公開 URL を開き、**メニュー →「バックアップを書き出す」**。ダウンロードフォルダに `.json` ファイルができます。
+2. そのファイルを iPhone に送ります。例：
+   - iCloud Drive（PC のブラウザで icloud.com にログイン → iCloud Drive にアップロード）
+   - 自分宛てのメールに添付する
+   - Google ドライブ / OneDrive などにアップロードする
+3. iPhone で公開 URL を開き、**メニュー →「バックアップを読み込む…」** → 「ファイル」アプリでそのファイルを選びます。
+   （メールの場合は、添付ファイルを長押し →「"ファイル"に保存」してから選びます）
+4. 「置き換える」を押すと完了です。
+
+iPhone → PC の場合は逆の手順です（iPhone で書き出し → AirDrop・メール・iCloud Drive などで PC へ → PC で読み込み）。
+
+---
+
+## 6. 使い方
+
+| やりたいこと           | PC（マウス）                                | iPhone（タッチ）                                     |
+| ---------------------- | ------------------------------------------- | ---------------------------------------------------- |
+| メモを開く             | 星をクリック                                | 星をタップ（下から詳細が出てきます）                 |
+| 星を動かす             | 星をドラッグ                                | 星を **少し長押し** してからドラッグ                 |
+| 宇宙を移動する         | 何もない所をドラッグ                        | 1 本指でドラッグ                                     |
+| 拡大・縮小             | マウスホイール、または左下の ＋ / − ボタン | 2 本指でピンチ                                       |
+| 星のタイトルを見る     | 星にマウスを重ねる                          | 星の下にタイトルが表示されます（ズームで増えます）   |
+| 全体を表示             | 左下の ⛶ ボタン                             | 左下の ⛶ ボタン                                      |
+| 新しい星をつくる       | 「星を追加」ボタン、または `N` キー        | 右下の ＋ ボタン                                     |
+| 検索                   | 上部の検索欄、または `/` キー              | 上部の検索欄                                         |
+| カテゴリで絞り込む     | 左側の「カテゴリ」パネル                    | 右上の絞り込みボタン（☰）                            |
+| 星をつなぐ             | 星を開く →「星をつなぐ」                    | 同じ                                                 |
+| つながりを外す         | 詳細の一覧で、つながりの横の ×              | 同じ                                                 |
+| 編集・削除             | 詳細の「編集」「削除」                      | 同じ                                                 |
+
+- タッチ操作で「長押し」が必要なのは、宇宙を動かそうとして誤って星を動かしてしまわないようにするためです。
+- 検索は、タイトルと本文の両方が対象です。ひらがな・カタカナ、全角・半角、大文字・小文字の違いは区別しません（例：「まらそん」で「マラソン」が見つかります）。
+- 最初に表示されるサンプルの星は、自由に編集・削除できます。
+
+---
+
+## 7. 自分の PC で動かす（開発用）
+
+コードを変更して動作を確認したいときの手順です。**ふだん使うだけなら不要です**（公開 URL を使ってください）。
+
+### 必要なもの
+
+- [Node.js](https://nodejs.org/ja) の **LTS 版**（20.19 以上、22 推奨）
+  インストール後、PowerShell で `node -v` と入力してバージョンが表示されれば OK です。
+
+### 起動
+
+PowerShell（またはコマンドプロンプト）でプロジェクトのフォルダに移動して：
+
+```bash
+npm install      # 初回のみ：必要なライブラリをダウンロード
+npm run dev      # 開発用サーバーを起動
+```
+
+表示された **http://localhost:5173** を Chrome / Edge で開きます。終了するには `Ctrl + C` を押します。
+
+| コマンド            | 内容                                                     |
+| ------------------- | -------------------------------------------------------- |
+| `npm run dev`       | 開発用サーバーを起動（保存すると自動で画面が更新される） |
+| `npm run build`     | 型チェック＋公開用ファイルを `dist/` に作成              |
+| `npm run preview`   | `dist/` の内容を http://localhost:4173 で確認            |
+| `npm run typecheck` | 型チェックのみ                                           |
+| `npm test`          | テストを実行                                             |
+
+### 同じ Wi-Fi の iPhone から開発中の画面を見る（任意）
+
+1. PC で `npm run dev` を実行し、表示される `Network: http://192.168.x.x:5173/` の URL を確認します
+   （または PowerShell で `ipconfig` を実行し、「Wi-Fi」の **IPv4 アドレス** を確認）。
+2. iPhone を **同じ Wi-Fi** につなぎ、Safari でその URL（`http://` と `:5173` を含む）を開きます。
+
+これは **自宅などの同じネットワーク内だけ** で使える方法です。外出先からは、公開 URL を使ってください。
+また、この方法で開いた場合のデータは、公開 URL のデータとは別に保存されます。
+
+---
+
+## 8. 困ったとき（トラブルシューティング）
+
+### 公開 URL を開くと「404 There isn't a GitHub Pages site here.」と表示される
+
+- [2 章](#2-初めて公開するときの設定1-回だけ) の設定（Source を「GitHub Actions」にする）が済んでいるか確認してください。
+- **Actions** タブで、最新の「Deploy to GitHub Pages」が ✅ になっているか確認してください。❌ の場合は「Re-run all jobs」でやり直せます。
+- 初回の公開直後は、表示されるまで数分かかることがあります。
+
+### Actions が ❌ になる
+
+- 実行結果を開き、赤くなっている手順名を確認します。
+  - **Type check / Unit tests / Build** が失敗：コードに誤りがあります。PC で `npm run typecheck` と `npm test` を実行して原因を確認してください（Claude Code に「Actions が失敗している原因を直して」と頼むこともできます）。
+  - **Publish to GitHub Pages** が失敗：Pages の設定（2 章）を確認してください。
+    「Branch "…" is not allowed to deploy to github-pages」と出る場合は、**Settings → Environments → github-pages** の
+    「Deployment branches」に、デフォルトブランチ（`claude/keen-dirac-43nys7`）が許可されているか確認してください。
+
+### 変更したのに公開サイトが古いまま
+
+- **Actions** タブで公開が ✅ になっているか確認してください（2〜3 分かかります）。
+- ページを再読み込みしてください。iPhone では、Safari のタブを閉じて開き直すか、ホーム画面のアプリを上にスワイプして終了してから開き直してください。
+
+### iPhone で星が消えた・PC の星が iPhone に出てこない
+
+- データは端末・ブラウザごとに別々です（[5 章](#5-データの保存とバックアップpc--iphone-のデータ移行)）。バックアップの書き出し・読み込みで移してください。
+- Safari とホーム画面のアプリでもデータは別々です。
+- プライベートブラウズでは保存されません。
+
+### 「保存データを読み込めませんでした」と表示された
+
+- 保存データが壊れていたため、サンプルの星を表示しています。元のデータはブラウザ内に別名で残してあります。
+  バックアップファイルがあれば「バックアップを読み込む」で元に戻せます。
+
+### バックアップを読み込めない
+
+- My Universe の「バックアップを書き出す」で作った `.json` ファイルを選んでください。
+- iPhone でファイルが選べない場合は、いったん「ファイル」アプリ（iPhone 内 または iCloud Drive）に保存してから選んでください。
+
+### 開発用サーバー（`npm run dev`）に iPhone からつながらない
+
+- PC と iPhone が **同じ Wi-Fi** につながっているか（iPhone がモバイルデータ通信になっていないか）確認してください。ゲスト用 Wi-Fi では端末同士が通信できないことがあります。
+- **Windows ファイアウォール**：初回起動時に「Node.js の通信を許可しますか？」と表示されたら **プライベート ネットワーク** を許可してください。
+  表示されなかった・拒否した場合は、**Windows セキュリティ → ファイアウォールとネットワーク保護 → ファイアウォールによるアプリケーションの許可** で **Node.js** の「プライベート」にチェックを入れます。
+- Wi-Fi のネットワーク プロファイルが **プライベート** になっているか確認してください（**設定 → ネットワークとインターネット → Wi-Fi → 接続中のネットワーク**）。
+- URL は `http://`（`https` ではない）で始まり、`:5173` が付いているか確認してください。VPN を使っている場合はオフにしてみてください。
+- PC のブラウザで `http://（IPアドレス）:5173` が開けるか試してください。開けない場合は PC 側（ファイアウォールなど）の問題です。
+
+---
+
+## 9. プロジェクトの構成（開発者向け）
 
 ```
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: http://192.168.1.23:5173/
-```
-
-Open **http://localhost:5173** in Chrome or Edge on the PC.
-Stop the server with `Ctrl + C` in the terminal.
-
-Other commands:
-
-| Command             | What it does                                                       |
-| ------------------- | ------------------------------------------------------------------ |
-| `npm run dev`       | Development server with live reload (also reachable on your Wi-Fi) |
-| `npm run build`     | Type-checks and builds the production files into `dist/`           |
-| `npm run preview`   | Serves the built `dist/` folder at http://localhost:4173           |
-| `npm run typecheck` | Only runs the TypeScript checker                                   |
-| `npm test`          | Runs the unit tests (data logic and storage)                       |
-
-## 3. Open it on your iPhone (same Wi-Fi)
-
-The dev server is already set up to accept connections from other devices on your network
-(`server.host: true` in `vite.config.ts`).
-
-1. **Start the server on the PC:** `npm run dev`.
-2. **Find the PC's local IP address.** Either:
-   - read the `Network:` line printed by `npm run dev` (for example `http://192.168.1.23:5173/`), **or**
-   - on Windows, open *Command Prompt* or *PowerShell* and run `ipconfig`. Under your Wi-Fi adapter
-     ("Wireless LAN adapter Wi-Fi"), look at **IPv4 Address**, for example `192.168.1.23`.
-3. **On the iPhone**, connect to the **same Wi-Fi network** as the PC, open **Safari** and enter
-   `http://192.168.1.23:5173` (use your own IP, keep `:5173` and write `http`, not `https`).
-4. Optional: tap **Share → Add to Home Screen** to open it like an app.
-
-### If the iPhone can't connect
-
-- **Same network?** The phone must be on the same Wi-Fi as the PC, not on mobile data, and not on a
-  "guest" Wi-Fi. Many guest networks block devices from seeing each other (this is called "client isolation").
-- **Windows Firewall.** The first time you run `npm run dev`, Windows may ask whether Node.js may communicate
-  on networks. Allow it for **Private networks**. If you dismissed that dialog:
-  *Windows Security → Firewall & network protection → Allow an app through firewall →* tick **Node.js** for *Private*.
-- **Network profile.** Make sure your Wi-Fi is set to **Private**, not *Public*
-  (*Settings → Network & Internet → Wi-Fi → (your network) → Network profile type*).
-- **Right address?** Use the IPv4 address from `ipconfig` (usually `192.168.x.x` or `10.x.x.x`), add `:5173`,
-  and start it with `http://`. If the PC has several adapters (VPN, Ethernet, virtual machines), try the one for Wi-Fi.
-  Turning off a VPN can help.
-- **Is the server still running?** The terminal running `npm run dev` must stay open.
-- **Port in use?** If Vite says port 5173 is busy it picks another one (e.g. 5174). Use the port it prints.
-- **Test from the PC first.** Open `http://<your-IP>:5173` in the PC's own browser. If that fails, the problem is on the PC side (firewall or server).
-
-### Local development vs. putting it on the internet
-
-- `npm run dev` + your IP address is **local only**. It works only inside your home or office Wi-Fi while your PC
-  is on. Nobody on the internet can reach it, and it uses plain `http`.
-- To use the app from anywhere, **deploy the built files** (`npm run build` → `dist/` folder) to a static
-  hosting service that provides **HTTPS**, such as Netlify, Vercel, Cloudflare Pages or GitHub Pages.
-  No server or database is needed, because it is a static website.
-
-## 4. How to use it
-
-| Action                    | Desktop (mouse)                   | iPhone (touch)                                   |
-| ------------------------- | --------------------------------- | ------------------------------------------------ |
-| Open a note               | Click a star                      | Tap a star (details open in a bottom sheet)      |
-| Move a star               | Drag it                           | **Press and hold** it briefly, then drag         |
-| Move around the universe  | Drag empty space                  | Drag with one finger                             |
-| Zoom                      | Mouse wheel, or the + / − buttons | Pinch with two fingers                           |
-| See star titles           | Hover a star                      | Titles are shown next to the stars               |
-| Show everything           | ⛶ button (bottom-left)            | ⛶ button (bottom-left)                           |
-| New star                  | **Add star** button, or press `N` | **+** button                                     |
-| Search                    | Search box, or press `/`          | Search box at the top                            |
-| Filter by category        | Category panel on the left        | Filter button (☰) at the top right              |
-| Connect two stars         | Open a star → **Connect star**    | Same                                             |
-| Remove a connection       | × next to it in the details       | Same                                             |
-| Edit / delete             | **Edit** / **Delete** in details  | Same                                             |
-
-Why "press and hold" on touch screens: a quick swipe that starts on a star moves the universe, and a short
-hold picks up the star. This way you don't move stars by accident while exploring.
-
-**Your data stays in this browser on this device.** The stars on your PC do not automatically appear on your
-iPhone. To move them, use **⋯ → Export backup** on one device and **⋯ → Import backup** on the other.
-Clearing the browser's website data also deletes your stars, so export a backup now and then.
-
-## 5. Project structure
-
-```
+.github/workflows/deploy.yml   GitHub Pages への自動公開（型チェック → テスト → ビルド → 公開）
+public/                        アイコン・Web アプリ マニフェスト
 src/
-├─ domain/                 Data model and rules (no React, no storage)
-│  ├─ types.ts             Note, Connection, Position, UniverseData
-│  ├─ categories.ts        Category names, colors and shapes
-│  ├─ universe.ts          Pure functions: create/edit/delete notes, connect, search…
-│  ├─ layout.ts            Star placement and overlap avoidance
-│  └─ sampleData.ts        The demo stars shown on first launch
-├─ storage/                Saving and loading
-│  ├─ types.ts             UniverseStorage interface (swap in a cloud backend later)
-│  ├─ localStorageAdapter.ts  The localStorage implementation
-│  ├─ validate.ts          Repairs or rejects damaged saved data
-│  ├─ backupFile.ts        Export / import JSON backups
-│  └─ preferences.ts       Small UI settings (e.g. the dismissed tip)
-├─ state/useUniverseStore.ts   React hook: holds the data, applies changes, auto-saves
+├─ i18n/ja.ts               画面に表示する日本語の文言（文言を変えるときはここ）
+├─ domain/                  データの型とルール（React や保存処理に依存しない）
+│  ├─ types.ts              Note / Connection / Position / UniverseData
+│  ├─ categories.ts         カテゴリの色と形
+│  ├─ universe.ts           メモの作成・編集・削除、つなぐ、検索など
+│  ├─ layout.ts             星の配置と重なり防止
+│  └─ sampleData.ts         初回に表示するサンプルの星
+├─ storage/                 保存と読み込み
+│  ├─ types.ts              UniverseStorage インターフェース（将来クラウド保存に差し替え可能）
+│  ├─ localStorageAdapter.ts  localStorage への保存
+│  ├─ validate.ts           壊れた保存データの修復・チェック
+│  ├─ backupFile.ts         バックアップの書き出し・読み込み
+│  └─ preferences.ts        小さな画面設定（ヒントを閉じた、など）
+├─ state/useUniverseStore.ts   データを保持し、変更を自動保存する React フック
 ├─ components/
-│  ├─ universe/            The visual universe
-│  │  ├─ Universe.tsx      SVG rendering, pan/zoom/drag/pinch gestures
-│  │  ├─ StarNode.tsx      One star (shape, glow, label)
-│  │  ├─ CategoryGlyph.tsx The five star shapes
-│  │  └─ StarField.tsx     Decorative background stars (not clickable)
-│  ├─ TopBar, SearchBox, CategoryFilter, DetailPanel, NoteFormModal,
-│  ├─ ConnectPicker, ConfirmDialog, DataMenu, HelpDialog, Toast, Modal…
-├─ hooks/                  Media queries, keyboard-aware viewport, element sizes
-├─ App.tsx                 Puts everything together
-└─ styles.css              All styling (colors are CSS variables at the top)
+│  ├─ universe/             宇宙の表示（SVG）と操作（ドラッグ・ズーム・ピンチ）、ラベル配置
+│  └─ …                     上部バー、検索、絞り込み、詳細パネル、各ダイアログ
+├─ hooks/                   画面サイズ・キーボード表示への対応
+├─ utils/                   ID 生成、日付表示、日本語入力（IME）判定
+├─ App.tsx                  全体の組み立て
+└─ styles.css               デザイン（色は先頭の CSS 変数）
 ```
 
-### Ideas for changing things
+### よくある変更の場所
 
-- **Category colors, names or shapes:** `src/domain/categories.ts`.
-- **Demo stars:** `src/domain/sampleData.ts`.
-- **Colors of the interface:** the `:root` variables at the top of `src/styles.css`.
-- **Star size and zoom limits:** `starSize`, `MIN_ZOOM` and `MAX_ZOOM` in `src/components/universe/Universe.tsx`.
+- **画面の文言**：`src/i18n/ja.ts`
+- **カテゴリの色・形**：`src/domain/categories.ts`（名前は `src/i18n/ja.ts`）
+- **サンプルの星**：`src/domain/sampleData.ts`
+- **画面の色**：`src/styles.css` 先頭の `:root`
 
-### Prepared for future features
+### 技術
 
-- Notes, star positions (`layout`) and connections are stored separately. The visualization only reads them,
-  so new sources of connections can be added without touching the drawing code.
-- Every connection has an `origin` field. The app currently creates only `"user"` connections.
-  `"ai"` is reserved for AI-suggested relationships.
-- All saving goes through the `UniverseStorage` interface. A cloud or database adapter can implement the same
-  `load` / `save` methods, and `validate.ts` already checks any incoming data.
-- Not included in this version: AI features, accounts, cloud sync, importing web pages.
+React 19 · TypeScript · Vite · SVG / Canvas（グラフライブラリ不使用）· Pointer Events（マウスとタッチ共通）·
+localStorage · Vitest（テスト）· GitHub Actions + GitHub Pages（公開）
 
-## 6. Tech
+有料サービス、AI API、外部データベースは使っていません。
 
-React 19 · TypeScript · Vite · hand-written SVG and Canvas (no graph library) · Pointer Events for mouse and touch ·
-localStorage · Vitest for unit tests.
+### 将来の拡張に向けて
 
-## 7. Browser support and known limitations
-
-- Targets current Chrome and Edge on Windows, and Safari on iOS 15 and newer.
-- Data lives only in one browser on one device (see Export / Import above). iOS may delete website data for
-  sites you haven't opened for a long time, so keep a backup.
-- Very large universes (many hundreds of stars) may feel slower on older phones. Everything is drawn as SVG.
-- With many stars close together, labels can overlap until you zoom in.
+- メモ・星の位置・つながりは別々に保存しており、表示部分はそれを読むだけです。AI によるつながりの提案などを、表示コードを変えずに追加できます。
+- つながりには `origin`（`"user"` / 将来用の `"ai"`）を記録しています。
+- 保存処理は `UniverseStorage` インターフェース経由なので、将来クラウド同期を追加する場合も差し替えで対応できます。

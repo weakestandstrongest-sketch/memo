@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { ja } from '../i18n/ja';
 
 interface State {
   error: Error | null;
@@ -20,10 +21,10 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     if (!this.state.error) return this.props.children;
     return (
       <div className="crash">
-        <h1>Something went wrong.</h1>
-        <p>Your stars are still saved in this browser. Reloading the page usually fixes this.</p>
+        <h1>{ja.crash.title}</h1>
+        <p>{ja.crash.text}</p>
         <button type="button" className="button button-primary" onClick={() => window.location.reload()}>
-          Reload
+          {ja.crash.reload}
         </button>
       </div>
     );

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { ja } from '../i18n/ja';
 import { createPortal } from 'react-dom';
 import { CloseIcon } from './icons';
 
@@ -82,7 +83,7 @@ export function Modal({ title, onClose, children, actions, size = 'medium', role
           <h2 id={titleId} className="modal-title">
             {title}
           </h2>
-          <button type="button" className="icon-button modal-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="icon-button modal-close" onClick={onClose} aria-label={ja.common.close}>
             <CloseIcon />
           </button>
         </header>

@@ -1,3 +1,4 @@
+import { ja } from '../i18n/ja';
 import { CATEGORY_IDS, type CategoryId } from './types';
 
 /** The star shapes available. Drawn by components/universe/CategoryGlyph.tsx. */
@@ -9,7 +10,7 @@ export interface CategoryInfo {
   /** Main star color. */
   color: string;
   shape: StarShape;
-  /** Short name of the shape, used in accessible labels ("Ideas, sparkle"). */
+  /** Short name of the shape, used in accessible labels. */
   shapeName: string;
   description: string;
 }
@@ -21,43 +22,43 @@ export interface CategoryInfo {
 export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   ideas: {
     id: 'ideas',
-    label: 'Ideas',
+    label: ja.categories.ideas.label,
     color: '#ffd166',
     shape: 'sparkle',
-    shapeName: 'sparkle',
-    description: 'Sparks, concepts and what-ifs',
+    shapeName: ja.categories.ideas.shapeName,
+    description: ja.categories.ideas.description,
   },
   learning: {
     id: 'learning',
-    label: 'Learning',
+    label: ja.categories.learning.label,
     color: '#4cc9f0',
     shape: 'planet',
-    shapeName: 'ringed planet',
-    description: 'Things you studied or discovered',
+    shapeName: ja.categories.learning.shapeName,
+    description: ja.categories.learning.description,
   },
   goals: {
     id: 'goals',
-    label: 'Goals',
+    label: ja.categories.goals.label,
     color: '#ff6b9a',
     shape: 'star',
-    shapeName: 'five-pointed star',
-    description: 'Where you want to go',
+    shapeName: ja.categories.goals.shapeName,
+    description: ja.categories.goals.description,
   },
   journal: {
     id: 'journal',
-    label: 'Journal',
+    label: ja.categories.journal.label,
     color: '#b39cff',
     shape: 'crescent',
-    shapeName: 'crescent moon',
-    description: 'Moments, feelings and reflections',
+    shapeName: ja.categories.journal.shapeName,
+    description: ja.categories.journal.description,
   },
   other: {
     id: 'other',
-    label: 'Other',
+    label: ja.categories.other.label,
     color: '#7ee8b5',
     shape: 'diamond',
-    shapeName: 'diamond',
-    description: 'Everything else',
+    shapeName: ja.categories.other.shapeName,
+    description: ja.categories.other.description,
   },
 };
 

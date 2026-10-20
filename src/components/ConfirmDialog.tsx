@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ja } from '../i18n/ja';
 import { Modal } from './Modal';
 
 interface ConfirmDialogProps {
@@ -21,7 +22,7 @@ export function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm,
       actions={
         <>
           <button type="button" className="button button-ghost" onClick={onCancel}>
-            Cancel
+            {ja.common.cancel}
           </button>
           <button
             type="button"

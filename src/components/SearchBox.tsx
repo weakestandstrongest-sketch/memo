@@ -1,7 +1,9 @@
 import { forwardRef, useRef, useState, type KeyboardEvent } from 'react';
+import { ja } from '../i18n/ja';
 import { CATEGORIES } from '../domain/categories';
 import type { Note } from '../domain/types';
 import { CloseIcon, SearchIcon } from './icons';
+import { isComposing } from '../utils/ime';
 import { CategoryIcon } from './universe/CategoryGlyph';
 
 interface SearchBoxProps {
@@ -41,6 +43,8 @@ export const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(function S
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
     } else if (e.key === 'Enter') {
+      // Enter that confirms a Japanese IME conversion must not open a result.
+      if (isComposing(e)) return;
       e.preventDefault();
       const target = shown[active] ?? shown[0];
       if (target) openResult(target.id);
@@ -71,8 +75,8 @@ export const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(function S
         type="search"
         inputMode="search"
         enterKeyHint="search"
-        placeholder="Search your universe"
-        aria-label="Search notes by title or text"
+        placeholder={ja.search.placeholder}
+        aria-label={ja.search.ariaLabel}
         autoComplete="off"
         value={query}
         onChange={(e) => {
@@ -90,7 +94,7 @@ export const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(function S
         <button
           type="button"
           className="icon-button search-clear"
-          aria-label="Clear search"
+          aria-label={ja.search.clear}
           onClick={() => onQueryChange('')}
         >
           <CloseIcon />
@@ -98,8 +102,8 @@ export const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(function S
       )}
 
       {showList && (
-        <ul id="search-results" className="search-results" role="listbox" aria-label="Matching stars">
-          {shown.length === 0 && <li className="search-empty">No stars match “{query.trim()}”.</li>}
+        <ul id="search-results" className="search-results" role="listbox" aria-label={ja.search.resultsLabel}>
+          {shown.length === 0 && <li className="search-empty">{ja.search.noMatch(query.trim())}</li>}
           {shown.map((n, i) => (
             <li key={n.id} role="option" aria-selected={i === active}>
               <button
@@ -117,7 +121,7 @@ export const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(function S
             </li>
           ))}
           {results.length > MAX_RESULTS && (
-            <li className="search-more">+{results.length - MAX_RESULTS} more highlighted in the universe</li>
+            <li className="search-more">{ja.search.more(results.length - MAX_RESULTS)}</li>
           )}
         </ul>
       )}

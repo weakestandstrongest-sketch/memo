@@ -12,6 +12,7 @@ import {
   linkedNotes,
   matchesQuery,
   moveNote,
+  normalizeForSearch,
   settleNote,
   updateNote,
   validateDraft,
@@ -61,10 +62,11 @@ describe('notes', () => {
 
   it('validates required fields', () => {
     expect(validateDraft({ title: ' ', body: '', category: null })).toEqual({
-      title: expect.any(String),
-      category: expect.any(String),
+      title: 'required',
+      category: 'required',
     });
-    expect(validateDraft({ title: 'x'.repeat(121), body: '', category: 'ideas' }).title).toBeDefined();
+    expect(validateDraft({ title: 'x'.repeat(121), body: '', category: 'ideas' }).title).toBe('tooLong');
+    expect(validateDraft({ title: 'ok', body: 'x'.repeat(10001), category: 'ideas' }).body).toBe('tooLong');
     expect(validateDraft({ title: 'Fine', body: '', category: 'other' })).toEqual({});
   });
 });
@@ -122,6 +124,16 @@ describe('search', () => {
     expect(matchesQuery(n, 'junction')).toBe(true);
     expect(matchesQuery(n, 'marathon')).toBe(false);
     expect(matchesQuery(n, '  ')).toBe(true);
+  });
+
+  it('handles Japanese: hiragana/katakana and full/half-width are treated alike', () => {
+    const n = make('ハーフマラソンを走る', '週３回トレーニング。ＴｙｐｅＳｃｒｉｐｔ も勉強');
+    expect(matchesQuery(n, 'はーふまらそん')).toBe(true); // hiragana finds katakana
+    expect(matchesQuery(n, 'ﾏﾗｿﾝ')).toBe(true); // half-width katakana
+    expect(matchesQuery(n, '週3回')).toBe(true); // half-width digit finds full-width
+    expect(matchesQuery(n, 'typescript')).toBe(true); // full-width latin letters
+    expect(matchesQuery(n, '水泳')).toBe(false);
+    expect(normalizeForSearch('ＡＢＣ　カナ')).toBe('abc かな');
   });
 });
 

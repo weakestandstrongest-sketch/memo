@@ -1,0 +1,224 @@
+/**
+ * All user-facing text (Japanese).
+ *
+ * To change any wording in the app, edit it here. Code, comments and
+ * identifiers stay in English; only the strings shown to the user live in this file.
+ * Text the user types (note titles and bodies) is never translated.
+ */
+import type { CategoryId } from '../domain/types';
+
+export const ja = {
+  app: {
+    name: 'My Universe',
+    tagline: 'あなたのアイデアで、あなただけの宇宙を。',
+    universeLabel: 'あなたの宇宙。ひとつひとつの星がメモです。',
+  },
+
+  categories: {
+    ideas: { label: 'アイデア', shapeName: 'きらめき', description: 'ひらめき・考え・「もしも」' },
+    learning: { label: '学び', shapeName: '輪のある惑星', description: '学んだこと・発見したこと' },
+    goals: { label: '目標', shapeName: '星', description: 'これから目指したいこと' },
+    journal: { label: '日記', shapeName: '三日月', description: '出来事・気持ち・ふり返り' },
+    other: { label: 'その他', shapeName: 'ひし形', description: 'どれにも当てはまらないもの' },
+  } satisfies Record<CategoryId, { label: string; shapeName: string; description: string }>,
+
+  common: {
+    close: '閉じる',
+    cancel: 'キャンセル',
+    clear: 'クリア',
+  },
+
+  topbar: {
+    starsUnit: '個の星',
+    links: (n: number) => `つながり ${n}`,
+    filterButton: (active: number) =>
+      active > 0 ? `カテゴリで絞り込む（${active}件選択中）` : 'カテゴリで絞り込む',
+    moreOptions: 'メニュー',
+  },
+
+  search: {
+    placeholder: '宇宙を検索',
+    ariaLabel: 'タイトルや本文でメモを検索',
+    clear: '検索をクリア',
+    resultsLabel: '見つかった星',
+    noMatch: (q: string) => `「${q}」に一致する星はありません。`,
+    more: (n: number) => `ほか${n}件は宇宙の中で光っています`,
+  },
+
+  filter: {
+    heading: 'カテゴリ',
+    groupLabel: 'カテゴリで絞り込む',
+    all: 'すべての星',
+    status: (matched: number, total: number) => `${total}個中 ${matched}個が一致`,
+  },
+
+  connectBanner: {
+    before: '星をタップすると「',
+    after: '」とつなぎます',
+  },
+
+  detail: {
+    ariaLabel: (title: string) => `星の詳細：${title}`,
+    sample: 'サンプル',
+    close: '詳細を閉じる',
+    created: (date: string) => `作成：${date}`,
+    edited: (date: string) => `編集：${date}`,
+    emptyBody: 'まだ本文はありません。',
+    linksHeading: 'つながっている星',
+    noLinks: 'まだどの星ともつながっていません。関連するアイデアとつなげてみましょう。',
+    removeLink: (title: string) => `「${title}」とのつながりを外す`,
+    removeLinkTooltip: 'つながりを外す',
+    connect: '星をつなぐ',
+    edit: '編集',
+    delete: '削除',
+    deleteAria: 'この星を削除',
+    sheetExpand: '大きく表示',
+    sheetCollapse: '小さく表示',
+  },
+
+  form: {
+    newTitle: '新しい星',
+    editTitle: '星を編集',
+    create: '星をつくる',
+    save: '保存する',
+    titleLabel: 'タイトル',
+    titlePlaceholder: 'どんな星ですか？',
+    categoryLabel: 'カテゴリ',
+    bodyLabel: 'メモ',
+    bodyPlaceholder: '思いついたことを書きとめましょう…',
+    required: '必須',
+    optional: '任意',
+    errors: {
+      titleRequired: 'タイトルを入力してください。',
+      titleTooLong: (max: number) => `タイトルは${max}文字以内にしてください。`,
+      bodyTooLong: (max: number) => `本文が長すぎます（${max}文字まで）。`,
+      categoryRequired: 'カテゴリを選んでください。',
+    },
+  },
+
+  connect: {
+    title: '星をつなぐ',
+    introBefore: '「',
+    introAfter: '」とつなぐ星を選んでください。',
+    needAnother: 'つなぐには、もうひとつ星をつくってください。',
+    searchPlaceholder: '星を探す…',
+    searchAria: 'つなぐ星を探す',
+    pickInUniverse: '宇宙の中で星をタップして選ぶ',
+    listLabel: 'つなげられる星',
+    alreadyConnected: 'つながり済み',
+    noMatch: (q: string) => `「${q}」に一致する星はありません。`,
+    errors: {
+      self: 'その星自身とはつなげません。別の星を選んでください。',
+      duplicate: 'この2つの星はすでにつながっています。',
+      missing: 'その星はもう存在しません。',
+    },
+  },
+
+  toast: {
+    created: '新しい星が生まれました ✦',
+    saved: '変更を保存しました。',
+    deleted: '星を削除しました。',
+    connected: (a: string, b: string) => `「${a}」と「${b}」をつなぎました`,
+    linkRemoved: 'つながりを外しました。',
+    exported: 'バックアップファイルを書き出しました。',
+    shared: 'バックアップファイルを共有しました。',
+    imported: 'バックアップを読み込みました。',
+  },
+
+  deleteDialog: {
+    title: 'この星を削除しますか？',
+    message: (title: string, links: number) =>
+      links > 0
+        ? `「${title}」と、そのつながり${links}本が削除されます。この操作は取り消せません。`
+        : `「${title}」が削除されます。この操作は取り消せません。`,
+    confirm: '削除する',
+  },
+
+  importDialog: {
+    title: 'バックアップを読み込みますか？',
+    message: (current: number, notes: number, links: number) =>
+      `いまの宇宙（星${current}個）を、バックアップの内容（星${notes}個・つながり${links}本）で置き換えます。` +
+      'いまの内容は消えるので、必要なら先に「バックアップを書き出す」で保存してください。',
+    confirm: '置き換える',
+  },
+
+  hint: {
+    touch: 'タップで開く・長押しで移動・ピンチで拡大縮小',
+    mouse: 'クリックで開く・ドラッグで移動・ホイールで拡大縮小',
+    dismiss: 'ヒントを閉じる',
+  },
+
+  view: {
+    zoomIn: '拡大',
+    zoomOut: '縮小',
+    fitAll: '宇宙全体を表示',
+  },
+
+  fab: '星を追加',
+
+  empty: {
+    title: 'あなたの宇宙は、最初の星を待っています。',
+    button: '最初の星をつくる',
+  },
+
+  menu: {
+    fitAll: '宇宙全体を表示',
+    help: '使い方',
+    export: 'バックアップを書き出す（.json）',
+    import: 'バックアップを読み込む…',
+    note: 'データはこの端末のこのブラウザにだけ保存されています。',
+  },
+
+  help: {
+    title: '使い方',
+    ok: 'わかった',
+    touch: [
+      ['星をタップ', 'メモを開く'],
+      ['星を長押ししてドラッグ', '星を動かす'],
+      ['1本指でドラッグ', '宇宙を移動'],
+      ['2本指でピンチ', '拡大・縮小'],
+    ],
+    mouse: [
+      ['星をクリック', 'メモを開く'],
+      ['星をドラッグ', '星を動かす'],
+      ['何もない所をドラッグ', '宇宙を移動'],
+      ['マウスホイール', '拡大・縮小'],
+      ['「/」キー・「N」キー', '検索・新しい星'],
+    ],
+    shapesHeading: '星の形',
+    dataHeading: 'データの保存について',
+    dataText:
+      'メモはこの端末のこのブラウザの中にだけ保存されます。PC と iPhone のデータは自動では同期されません。' +
+      'データを移すときは、メニューの「バックアップを書き出す」でファイルを保存し、もう一方の端末で「バックアップを読み込む」を使ってください。',
+  },
+
+  storageNotice: {
+    repaired: '保存データの一部が壊れていたため、修復しました。',
+    corrupt:
+      '保存データを読み込めませんでした。元のデータはこのブラウザ内にバックアップとして残し、サンプルの星を表示しています。',
+    unavailable:
+      'このブラウザではデータを保存できない設定になっています（プライベートブラウズなど）。ページを閉じると変更は失われます。',
+    saveFailed: '最新の変更を保存できませんでした。ブラウザの保存容量がいっぱいかもしれません。',
+  },
+
+  backup: {
+    shareTitle: 'My Universe のバックアップ',
+    errors: {
+      tooLarge: 'ファイルが大きすぎます。My Universe のバックアップではないようです。',
+      notJson: 'このファイルは JSON 形式ではありません。',
+      notBackup: 'My Universe のバックアップファイルではないようです。',
+      readFailed: 'ファイルを読み込めませんでした。',
+      exportFailed: 'バックアップを書き出せませんでした。',
+    },
+  },
+
+  star: {
+    ariaLabel: (title: string, category: string, shape: string) => `${title}（${category}・${shape}）`,
+  },
+
+  crash: {
+    title: '問題が発生しました。',
+    text: '星はこのブラウザに保存されたままです。ページを再読み込みすると、たいてい直ります。',
+    reload: '再読み込み',
+  },
+};

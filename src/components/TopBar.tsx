@@ -1,4 +1,5 @@
 import { forwardRef, type ReactNode } from 'react';
+import { ja } from '../i18n/ja';
 import { FilterIcon } from './icons';
 
 interface TopBarProps {
@@ -22,8 +23,8 @@ export const TopBar = forwardRef<HTMLElement, TopBarProps>(function TopBar(
       <div className="brand">
         <Logo />
         <div className="brand-text">
-          <h1 className="brand-name">My Universe</h1>
-          <p className="brand-tagline">Build your own universe of ideas.</p>
+          <h1 className="brand-name">{ja.app.name}</h1>
+          <p className="brand-tagline">{ja.app.tagline}</p>
         </div>
       </div>
 
@@ -31,17 +32,14 @@ export const TopBar = forwardRef<HTMLElement, TopBarProps>(function TopBar(
 
       <div className="topbar-right">
         <p className="star-count" aria-live="polite">
-          <strong>{starCount}</strong> {starCount === 1 ? 'star' : 'stars'}
-          <span className="star-count-links">
-            {' '}
-            · {linkCount} {linkCount === 1 ? 'link' : 'links'}
-          </span>
+          <strong>{starCount}</strong> {ja.topbar.starsUnit}
+          <span className="star-count-links"> ・ {ja.topbar.links(linkCount)}</span>
         </p>
         {showFilterButton && (
           <button
             type="button"
             className={`icon-button topbar-button ${activeFilterCount > 0 ? 'is-active' : ''}`}
-            aria-label={`Filter by category${activeFilterCount ? ` (${activeFilterCount} active)` : ''}`}
+            aria-label={ja.topbar.filterButton(activeFilterCount)}
             aria-expanded={filtersOpen}
             aria-controls="filter-popover"
             onClick={onToggleFilters}

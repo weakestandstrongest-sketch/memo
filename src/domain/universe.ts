@@ -20,15 +20,20 @@ export function emptyUniverse(): UniverseData {
 // Validation
 // ---------------------------------------------------------------------------
 
-export type DraftErrors = Partial<Record<'title' | 'body' | 'category', string>>;
+/** Problems found in a draft, as codes. The UI turns them into messages (see i18n/ja.ts). */
+export interface DraftErrors {
+  title?: 'required' | 'tooLong';
+  body?: 'tooLong';
+  category?: 'required';
+}
 
 export function validateDraft(draft: NoteDraft): DraftErrors {
   const errors: DraftErrors = {};
   const title = draft.title.trim();
-  if (!title) errors.title = 'Please give your star a title.';
-  else if (title.length > LIMITS.title) errors.title = `Keep the title under ${LIMITS.title} characters.`;
-  if (draft.body.length > LIMITS.body) errors.body = `The note is too long (max ${LIMITS.body} characters).`;
-  if (!draft.category) errors.category = 'Choose a category.';
+  if (!title) errors.title = 'required';
+  else if (title.length > LIMITS.title) errors.title = 'tooLong';
+  if (draft.body.length > LIMITS.body) errors.body = 'tooLong';
+  if (!draft.category) errors.category = 'required';
   return errors;
 }
 
@@ -123,12 +128,6 @@ export function checkConnection(data: UniverseData, a: string, b: string): Conne
   return { ok: true };
 }
 
-export const CONNECT_ERROR_MESSAGES: Record<'self' | 'duplicate' | 'missing', string> = {
-  self: 'A star cannot connect to itself.',
-  duplicate: 'These stars are already connected.',
-  missing: 'That star no longer exists.',
-};
-
 export function connectNotes(
   data: UniverseData,
   a: string,
@@ -195,7 +194,7 @@ export function linkedNotes(data: UniverseData, id: string): LinkedNote[] {
     const note = otherId ? byId.get(otherId) : undefined;
     if (note) result.push({ connection: c, note });
   }
-  return result.sort((x, y) => x.note.title.localeCompare(y.note.title));
+  return result.sort((x, y) => x.note.title.localeCompare(y.note.title, 'ja'));
 }
 
 /** Number of connections per note id. */
@@ -208,11 +207,22 @@ export function degreeMap(connections: Connection[]): Map<string, number> {
   return map;
 }
 
-/** Case-insensitive search across title and body. Empty query matches everything. */
+/**
+ * Makes text easier to search in Japanese and English:
+ * - full-width / half-width letters, digits and katakana are unified (NFKC), e.g. "ＡＢＣ" → "abc", "ｶﾀｶﾅ" → "カタカナ"
+ * - katakana is turned into hiragana, so "ほし" also finds "ホシ"
+ * - upper / lower case is ignored
+ */
+export function normalizeForSearch(text: string): string {
+  return text
+    .normalize('NFKC')
+    .toLocaleLowerCase()
+    .replace(/[\u30a1-\u30f6]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+}
+
+/** Searches title and body. Empty query matches everything. */
 export function matchesQuery(note: Note, query: string): boolean {
-  const q = query.trim().toLocaleLowerCase();
+  const q = normalizeForSearch(query.trim());
   if (!q) return true;
-  return (
-    note.title.toLocaleLowerCase().includes(q) || note.body.toLocaleLowerCase().includes(q)
-  );
+  return normalizeForSearch(note.title).includes(q) || normalizeForSearch(note.body).includes(q);
 }

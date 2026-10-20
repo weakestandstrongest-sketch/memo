@@ -10,14 +10,14 @@ export function createSampleUniverse(now = new Date()): UniverseData {
   const raw: Array<Omit<Note, 'createdAt' | 'updatedAt' | 'sample'> & { age: number; x: number; y: number }> = [
     {
       id: 'sample-welcome',
-      title: 'Welcome to My Universe',
+      title: 'My Universe へようこそ',
       body:
-        'Every note you write becomes a star.\n\n' +
-        '• Tap or click a star to read it.\n' +
-        '• Drag a star to move it (on a phone: press and hold, then drag).\n' +
-        '• Drag empty space to fly around; scroll or pinch to zoom.\n' +
-        '• Use “Connect star” to link related ideas.\n\n' +
-        'These sample stars are yours to edit or delete.',
+        '書いたメモは、ひとつひとつが星になります。\n\n' +
+        '・星をタップ（クリック）すると内容を読めます。\n' +
+        '・星をドラッグすると動かせます（スマホでは長押ししてからドラッグ）。\n' +
+        '・何もない所をドラッグすると宇宙を移動、ピンチやホイールで拡大・縮小できます。\n' +
+        '・「星をつなぐ」で、関係のあるアイデア同士を線で結べます。\n\n' +
+        'サンプルの星は、自由に編集・削除してかまいません。',
       category: 'other',
       age: 60 * 24 * 3,
       x: 0,
@@ -25,10 +25,10 @@ export function createSampleUniverse(now = new Date()): UniverseData {
     },
     {
       id: 'sample-semiconductors',
-      title: 'How semiconductors work',
+      title: '半導体のしくみ',
       body:
-        'Silicon becomes useful when it is "doped" with other atoms, creating n-type and p-type regions. ' +
-        'Where they meet (a p-n junction), current flows in only one direction — the basis of diodes and transistors.',
+        'シリコンに別の原子を少し混ぜる（ドーピング）と、n型とp型の領域ができる。' +
+        '両者が接する部分（pn接合）では電流が一方向にしか流れない。これがダイオードやトランジスタの基本。',
       category: 'learning',
       age: 60 * 24 * 2,
       x: 250,
@@ -36,8 +36,8 @@ export function createSampleUniverse(now = new Date()): UniverseData {
     },
     {
       id: 'sample-research-goal',
-      title: 'Research goal: next-generation chip materials',
-      body: 'Explore materials beyond silicon (e.g. gallium nitride, 2D materials) for my future research.',
+      title: '研究目標：次世代の半導体材料',
+      body: 'シリコンの次に来る材料（窒化ガリウム、2次元材料など）を、将来の研究テーマとして調べる。',
       category: 'goals',
       age: 60 * 30,
       x: 430,
@@ -45,8 +45,8 @@ export function createSampleUniverse(now = new Date()): UniverseData {
     },
     {
       id: 'sample-map-idea',
-      title: 'Idea: a map of my thoughts',
-      body: 'What if notes were places you could visit instead of files in folders?',
+      title: 'アイデア：考えの地図',
+      body: 'メモをフォルダの中のファイルではなく、「訪れる場所」として扱えたらどうだろう？',
       category: 'ideas',
       age: 60 * 26,
       x: -230,
@@ -54,8 +54,8 @@ export function createSampleUniverse(now = new Date()): UniverseData {
     },
     {
       id: 'sample-typescript',
-      title: 'Learn TypeScript basics',
-      body: 'Types, interfaces, and how the compiler catches mistakes before the code runs.',
+      title: 'TypeScript の基本を学ぶ',
+      body: '型・インターフェース、そして実行前にコンパイラがミスを見つけてくれるしくみ。',
       category: 'learning',
       age: 60 * 20,
       x: -330,
@@ -63,8 +63,8 @@ export function createSampleUniverse(now = new Date()): UniverseData {
     },
     {
       id: 'sample-walk',
-      title: 'Morning walk reflections',
-      body: 'Clear sky today. I think best when I am moving — maybe I should plan big decisions on walks.',
+      title: '朝の散歩で考えたこと',
+      body: '今日は快晴。歩いているときがいちばん考えがまとまる。大事なことは散歩しながら決めるといいかもしれない。',
       category: 'journal',
       age: 60 * 5,
       x: 120,
@@ -72,8 +72,8 @@ export function createSampleUniverse(now = new Date()): UniverseData {
     },
     {
       id: 'sample-marathon',
-      title: 'Run a half marathon',
-      body: 'Train three times a week. Target: next spring.',
+      title: 'ハーフマラソンを走る',
+      body: '週3回トレーニングする。目標は来年の春。',
       category: 'goals',
       age: 60 * 3,
       x: 330,
@@ -81,8 +81,8 @@ export function createSampleUniverse(now = new Date()): UniverseData {
     },
     {
       id: 'sample-weekly-review',
-      title: 'Idea: weekly review ritual',
-      body: 'Every Sunday, look at the stars I added this week and connect the related ones.',
+      title: 'アイデア：週に一度のふり返り',
+      body: '毎週日曜日に、その週に増えた星を見返して、関係のある星同士をつなぐ。',
       category: 'ideas',
       age: 45,
       x: -130,

@@ -28,8 +28,9 @@
 
   --radius: 14px;
   --shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.65);
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
+  /* Japanese-first system fonts: iPhone / Mac (Hiragino), Windows (Yu Gothic UI, Meiryo) */
+  --font: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Segoe UI Variable',
+    'Segoe UI', 'Yu Gothic UI', 'Meiryo UI', Meiryo, system-ui, Roboto, 'Noto Sans JP', sans-serif;
 
   /* iPhone notch / Dynamic Island / home indicator */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -77,6 +78,7 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  line-break: strict; /* Japanese line-breaking rules (no line starting with 。、 etc.) */
 }
 
 button,
@@ -711,6 +713,7 @@ p {
   z-index: 15;
   left: 50%;
   transform: translateX(-50%);
+  width: max-content; /* otherwise "left: 50%" limits the width to half the screen */
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1046,6 +1049,7 @@ p {
   left: 50%;
   bottom: calc(var(--safe-bottom) + 26px);
   transform: translateX(-50%);
+  width: max-content;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1545,6 +1549,15 @@ p {
 
 .help-legend strong {
   color: var(--text);
+}
+
+.help-data-title {
+  margin-top: 20px;
+}
+
+.help-data {
+  font-size: 14px;
+  color: var(--text-dim);
 }
 
 .category-icon {

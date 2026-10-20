@@ -1,30 +1,18 @@
 import { CATEGORY_LIST } from '../domain/categories';
+import { ja } from '../i18n/ja';
 import { Modal } from './Modal';
 import { CategoryIcon } from './universe/CategoryGlyph';
 
 export function HelpDialog({ touch, onClose }: { touch: boolean; onClose: () => void }) {
-  const gestures = touch
-    ? [
-        ['Tap a star', 'open its note'],
-        ['Press & hold a star, then drag', 'move it'],
-        ['Drag with one finger', 'fly around'],
-        ['Pinch with two fingers', 'zoom in and out'],
-      ]
-    : [
-        ['Click a star', 'open its note'],
-        ['Drag a star', 'move it'],
-        ['Drag empty space', 'fly around'],
-        ['Scroll the mouse wheel', 'zoom in and out'],
-        ['Press  /  or  N', 'search · new star'],
-      ];
+  const gestures = touch ? ja.help.touch : ja.help.mouse;
   return (
     <Modal
-      title="How to explore"
+      title={ja.help.title}
       onClose={onClose}
       size="small"
       actions={
         <button type="button" className="button button-primary" data-autofocus onClick={onClose}>
-          Got it
+          {ja.help.ok}
         </button>
       }
     >
@@ -36,7 +24,7 @@ export function HelpDialog({ touch, onClose }: { touch: boolean; onClose: () => 
           </div>
         ))}
       </dl>
-      <h3 className="section-title">Star shapes</h3>
+      <h3 className="section-title">{ja.help.shapesHeading}</h3>
       <ul className="help-legend">
         {CATEGORY_LIST.map((c) => (
           <li key={c.id}>
@@ -47,6 +35,8 @@ export function HelpDialog({ touch, onClose }: { touch: boolean; onClose: () => 
           </li>
         ))}
       </ul>
+      <h3 className="section-title help-data-title">{ja.help.dataHeading}</h3>
+      <p className="help-data">{ja.help.dataText}</p>
     </Modal>
   );
 }
