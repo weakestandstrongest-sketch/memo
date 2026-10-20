@@ -6,9 +6,11 @@ import { ja } from './i18n/ja';
 import { useUniverseStore, type StorageNotice } from './state/useUniverseStore';
 import { exportBackup, readBackupFile } from './storage/backupFile';
 import { readPref, writePref } from './storage/preferences';
+import { daysSinceBackup, isBackupDue, updateSettings, useSettings } from './storage/settings';
 import { useElementRect } from './hooks/useElementRect';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useVisualViewportVars } from './hooks/useVisualViewport';
+import { BackupReminder } from './components/BackupReminder';
 import { CategoryFilter } from './components/CategoryFilter';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ConnectPicker } from './components/ConnectPicker';
@@ -18,6 +20,7 @@ import { GroupDialog } from './components/GroupDialog';
 import { HelpDialog } from './components/HelpDialog';
 import { NoteFormModal } from './components/NoteFormModal';
 import { SearchBox } from './components/SearchBox';
+import { SettingsDialog } from './components/SettingsDialog';
 import { Sidebar } from './components/Sidebar';
 import { Toast, type ToastMessage } from './components/Toast';
 import { TopBar } from './components/TopBar';
@@ -31,6 +34,7 @@ type Dialog =
   | { kind: 'delete'; id: string }
   | { kind: 'import'; data: UniverseData }
   | { kind: 'help' }
+  | { kind: 'settings' }
   | { kind: 'group-create' }
   | { kind: 'group-edit'; id: string }
   | { kind: 'group-delete'; id: string }
@@ -46,7 +50,12 @@ const NOTICE_TEXT: Record<Exclude<StorageNotice, null>, string> = {
   'save-failed': ja.storageNotice.saveFailed,
 };
 
-export default function App() {
+interface AppProps {
+  /** Locks the app right away. Only set while the passcode lock is on. */
+  onLockNow?: () => void;
+}
+
+export default function App({ onLockNow }: AppProps) {
   useVisualViewportVars();
   const { data, actions, notice, clearNotice } = useUniverseStore();
 
@@ -72,6 +81,21 @@ export default function App() {
   const [newStarId, setNewStarId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [hintVisible, setHintVisible] = useState(() => readPref('hint-dismissed') !== '1');
+  const settings = useSettings();
+  // "Now", refreshed when the app comes back to the screen and every 30 minutes (for the reminder).
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const tick = () => setClock(Date.now());
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    const timer = window.setInterval(tick, 30 * 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const showToast = useCallback((text: string, tone: ToastMessage['tone'] = 'info') => {
     setToast({ id: Date.now() + Math.random(), text, tone });
@@ -244,6 +268,20 @@ export default function App() {
   };
 
   // --- Backup import / export ---------------------------------------------
+  /** Exports a backup and remembers when, for the backup reminder. */
+  const runExport = () => {
+    exportBackup(data)
+      .then((result) => {
+        if (result === 'cancelled') return;
+        showToast(result === 'shared' ? ja.toast.shared : ja.toast.exported);
+        updateSettings((s) => ({
+          ...s,
+          backup: { ...s.backup, lastBackupAt: new Date().toISOString(), snoozedUntil: null },
+        }));
+      })
+      .catch(() => showToast(ja.backup.errors.exportFailed, 'error'));
+  };
+
   const importFile = async (file: File) => {
     try {
       const imported = await readBackupFile(file);
@@ -258,6 +296,13 @@ export default function App() {
   const connecting = dialog?.kind === 'connect' ? notesById.get(dialog.id) : undefined;
   const deleting = dialog?.kind === 'delete' ? notesById.get(dialog.id) : undefined;
   const showFab = !(compact && detailVisible) && !connectSourceId;
+  const hasOwnNotes = data.notes.some((n) => !n.sample);
+  const showReminder =
+    isBackupDue(settings.backup, hasOwnNotes, new Date(clock)) &&
+    !dialog &&
+    !connectSourceId &&
+    !sidebarOpen &&
+    !(compact && detailVisible);
 
   return (
     <div
@@ -308,15 +353,10 @@ export default function App() {
           <DataMenu
             onFitAll={() => universeRef.current?.fitAll()}
             onShowHelp={() => setDialog({ kind: 'help' })}
-            onExport={() => {
-              exportBackup(data)
-                .then((result) => {
-                  if (result === 'downloaded') showToast(ja.toast.exported);
-                  else if (result === 'shared') showToast(ja.toast.shared);
-                })
-                .catch(() => showToast(ja.backup.errors.exportFailed, 'error'));
-            }}
+            onExport={runExport}
             onImportFile={importFile}
+            onOpenSettings={() => setDialog({ kind: 'settings' })}
+            onLockNow={onLockNow}
           />
         }
       />
@@ -423,7 +463,21 @@ export default function App() {
         </button>
       )}
 
-      {hintVisible && !selected && !connectSourceId && (
+      {showReminder && (
+        <BackupReminder
+          days={settings.backup.lastBackupAt ? daysSinceBackup(settings.backup, new Date(clock)) : null}
+          onExport={runExport}
+          onLater={() => {
+            updateSettings((s) => ({
+              ...s,
+              backup: { ...s.backup, snoozedUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() },
+            }));
+            showToast(ja.toast.reminderSnoozed);
+          }}
+        />
+      )}
+
+      {hintVisible && !showReminder && !selected && !connectSourceId && (
         <div className="hint glass">
           <span>
             {touch ? ja.hint.touch : ja.hint.mouse}
@@ -557,6 +611,10 @@ export default function App() {
       )}
 
       {dialog?.kind === 'help' && <HelpDialog touch={touch} onClose={() => setDialog(null)} />}
+
+      {dialog?.kind === 'settings' && (
+        <SettingsDialog onClose={() => setDialog(null)} onExport={runExport} onToast={showToast} />
+      )}
 
       {dialog?.kind === 'group-create' && (
         <GroupDialog

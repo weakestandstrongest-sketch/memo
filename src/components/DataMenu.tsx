@@ -8,10 +8,13 @@ interface DataMenuProps {
   onImportFile: (file: File) => void;
   onFitAll: () => void;
   onShowHelp: () => void;
+  onOpenSettings: () => void;
+  /** Only set while the passcode lock is on. */
+  onLockNow?: () => void;
 }
 
 /** "⋯" menu with view and backup options. */
-export function DataMenu({ onExport, onImportFile, onFitAll, onShowHelp }: DataMenuProps) {
+export function DataMenu({ onExport, onImportFile, onFitAll, onShowHelp, onOpenSettings, onLockNow }: DataMenuProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -64,6 +67,15 @@ export function DataMenu({ onExport, onImportFile, onFitAll, onShowHelp }: DataM
           <button type="button" role="menuitem" className="menu-item" onClick={run(() => fileRef.current?.click())}>
             {ja.menu.import}
           </button>
+          <div className="menu-separator" role="separator" />
+          <button type="button" role="menuitem" className="menu-item" onClick={run(onOpenSettings)}>
+            {ja.menu.settings}
+          </button>
+          {onLockNow && (
+            <button type="button" role="menuitem" className="menu-item" onClick={run(onLockNow)}>
+              {ja.menu.lockNow}
+            </button>
+          )}
           <p className="menu-note">{ja.menu.note}</p>
         </div>
       )}

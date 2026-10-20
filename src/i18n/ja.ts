@@ -137,6 +137,10 @@ export const ja = {
     groupCreated: (name: string) => `グループ「${name}」をつくりました。`,
     groupSaved: 'グループを保存しました。',
     groupDeleted: 'グループを削除しました。',
+    lockEnabled: 'パスコードロックをオンにしました。',
+    lockDisabled: 'パスコードロックをオフにしました。',
+    passcodeChanged: 'パスコードを変更しました。',
+    reminderSnoozed: 'あした、またお知らせします。',
   },
 
   deleteDialog: {
@@ -203,6 +207,85 @@ export const ja = {
     confirm: '削除する',
   },
 
+  lock: {
+    title: 'パスコードを入力',
+    screenLabel: 'My Universe はロックされています',
+    wrong: 'パスコードが違います',
+    cooldown: (seconds: number) => `間違いが続いたため、${seconds}秒後にもう一度入力できます。`,
+    forgot: 'パスコードを忘れた',
+    backspace: '1文字消す',
+    keyboardHint: 'キーボードの数字キーでも入力できます。',
+  },
+
+  passcodeSetup: {
+    setTitle: 'パスコードを設定',
+    changeTitle: 'パスコードを変更',
+    disableTitle: 'ロックをオフにする',
+    enterCurrent: '今のパスコードを入力してください',
+    enterNew: (min: number, max: number) => `新しいパスコード（${min}〜${max}桁の数字）`,
+    confirm: '確認のため、もう一度入力してください',
+    next: '次へ',
+    mismatch: 'パスコードが一致しません。最初から入力してください。',
+    tooShort: (min: number) => `${min}桁以上で入力してください。`,
+    wrongCurrent: 'パスコードが違います。',
+    note:
+      'パスコードはこの端末のこのブラウザにだけ保存されます。忘れると、この端末のデータを消さない限り開けなくなるため、先にバックアップをとっておくと安心です。',
+  },
+
+  forgotDialog: {
+    title: 'パスコードを忘れたとき',
+    text:
+      'パスコードはどこにも送信していないため、再発行できません。ロックを解除するには、この端末のこのブラウザに保存された My Universe のデータ（星・グループ・設定）をすべて消す必要があります。',
+    backupText: 'バックアップファイルがあれば、初期化したあとに「バックアップを読み込む」で元に戻せます。',
+    typeLabel: '確認のため「削除」と入力してください',
+    confirmWord: '削除',
+    confirm: 'データを消して初期化',
+  },
+
+  settings: {
+    title: '設定',
+    lockHeading: 'パスコードロック',
+    on: 'オン',
+    off: 'オフ',
+    lockOnText: 'アプリを開くときにパスコードが必要です。',
+    lockOffText: 'パスコードを設定すると、アプリを開くときに入力が必要になります。',
+    setPasscode: 'パスコードを設定する',
+    changePasscode: 'パスコードを変更',
+    disableLock: 'ロックをオフにする',
+    autoLockLabel: 'ほかのアプリから戻ったときにロックするまで',
+    autoLockOption: (minutes: number) => (minutes === 0 ? 'すぐに' : minutes === 60 ? '1時間' : `${minutes}分`),
+    lockLimitNote:
+      'ロックは、ほかの人に端末を触られたときにメモを見られにくくするためのものです。データ自体は暗号化されません。',
+    backupHeading: 'バックアップの通知',
+    backupLabel: '通知する間隔',
+    backupOption: (days: number) =>
+      days === 0
+        ? '通知しない'
+        : days === 1
+          ? '毎日'
+          : days === 7
+            ? '1週間ごと'
+            : days === 14
+              ? '2週間ごと'
+              : days === 30
+                ? '1か月ごと'
+                : `${days}日ごと`,
+    lastBackup: (date: string | null) => (date ? `最後のバックアップ：${date}` : 'まだバックアップしていません。'),
+    exportNow: '今すぐ書き出す',
+    backupNote: 'アプリを開いたときに、画面の中にお知らせを表示します（スマホのプッシュ通知ではありません）。',
+    deviceNote: 'これらの設定は、この端末のこのブラウザにだけ保存されます（PC と iPhone で別々です）。',
+    saveFailed: '設定を保存できませんでした。プライベートブラウズでは保存できません。',
+  },
+
+  reminder: {
+    label: 'バックアップのお知らせ',
+    never: 'まだバックアップをとっていません。',
+    due: (days: number) => `前回のバックアップから${days}日たっています。`,
+    text: 'データはこの端末にしか保存されていないので、ときどき書き出しておきましょう。',
+    exportNow: '今すぐ書き出す',
+    later: 'あとで',
+  },
+
   hint: {
     touch: 'タップで開く・長押しで移動・ピンチで拡大縮小',
     mouse: 'クリックで開く・ドラッグで移動・ホイールで拡大縮小',
@@ -228,6 +311,8 @@ export const ja = {
     export: 'バックアップを書き出す（.json）',
     import: 'バックアップを読み込む…',
     note: 'データはこの端末のこのブラウザにだけ保存されています。',
+    settings: '設定',
+    lockNow: '今すぐロック',
   },
 
   help: {

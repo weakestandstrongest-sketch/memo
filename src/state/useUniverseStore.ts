@@ -121,6 +121,8 @@ export function useUniverseStore(storage: UniverseStorage = defaultStorage) {
     return () => {
       window.removeEventListener('pagehide', onHide);
       document.removeEventListener('visibilitychange', onVisibility);
+      // The app is being closed (e.g. replaced by the lock screen): save right away.
+      flush();
     };
   }, [flush]);
 
