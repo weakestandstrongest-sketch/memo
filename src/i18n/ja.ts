@@ -9,7 +9,7 @@ import type { CategoryId } from '../domain/types';
 
 export const ja = {
   app: {
-    name: 'My Universe',
+    name: 'Asterism',
     tagline: 'あなたのアイデアで、あなただけの宇宙を。',
     universeLabel: 'あなたの宇宙。ひとつひとつの星がメモです。',
   },
@@ -212,7 +212,7 @@ export const ja = {
 
   lock: {
     title: 'パスコードを入力',
-    screenLabel: 'My Universe はロックされています',
+    screenLabel: 'Asterism はロックされています',
     wrong: 'パスコードが違います',
     cooldown: (seconds: number) => `間違いが続いたため、${seconds}秒後にもう一度入力できます。`,
     forgot: 'パスコードを忘れた',
@@ -238,7 +238,7 @@ export const ja = {
   forgotDialog: {
     title: 'パスコードを忘れたとき',
     text:
-      'パスコードはどこにも送信していないため、再発行できません。ロックを解除するには、この端末のこのブラウザに保存された My Universe のデータ（星・グループ・設定）をすべて消す必要があります。',
+      'パスコードはどこにも送信していないため、再発行できません。ロックを解除するには、この端末のこのブラウザに保存された Asterism のデータ（星・グループ・設定）をすべて消す必要があります。',
     backupText: 'バックアップファイルがあれば、初期化したあとに「バックアップを読み込む」で元に戻せます。',
     typeLabel: '確認のため「削除」と入力してください',
     confirmWord: '削除',
@@ -282,7 +282,7 @@ export const ja = {
     timeSky: '時間帯で空の色を変える',
     timeSkyText: '夜明け・昼・夕方・夜で、宇宙の色が少しずつ変わります。',
     splash: '開いたときのアニメーション',
-    splashText: 'アプリを開くと、星が生まれて「My Universe」の文字が浮かびます。画面をタップすると飛ばせます。',
+    splashText: 'アプリを開くと、星が生まれて「Asterism」の文字が浮かびます。画面をタップすると飛ばせます。',
     deviceNote: 'これらの設定は、この端末のこのブラウザにだけ保存されます（PC と iPhone で別々です）。',
     saveFailed: '設定を保存できませんでした。プライベートブラウズでは保存できません。',
   },
@@ -389,11 +389,11 @@ export const ja = {
   },
 
   backup: {
-    shareTitle: 'My Universe のバックアップ',
+    shareTitle: 'Asterism のバックアップ',
     errors: {
-      tooLarge: 'ファイルが大きすぎます。My Universe のバックアップではないようです。',
+      tooLarge: 'ファイルが大きすぎます。Asterism のバックアップではないようです。',
       notJson: 'このファイルは JSON 形式ではありません。',
-      notBackup: 'My Universe のバックアップファイルではないようです。',
+      notBackup: 'Asterism のバックアップファイルではないようです。',
       readFailed: 'ファイルを読み込めませんでした。',
       exportFailed: 'バックアップを書き出せませんでした。',
     },

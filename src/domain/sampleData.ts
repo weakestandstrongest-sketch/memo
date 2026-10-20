@@ -10,7 +10,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
   const raw: Array<Omit<Note, 'createdAt' | 'updatedAt' | 'sample'> & { age: number; x: number; y: number }> = [
     {
       id: 'sample-welcome',
-      title: 'My Universe へようこそ',
+      title: 'Asterism へようこそ',
       body:
         '書いたメモは、ひとつひとつが星になります。\n\n' +
         '・星をタップ（クリック）すると内容を読めます。\n' +

@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "My Universe — build your own universe of ideas.",
+  "description": "Asterism — connect your ideas like stars.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

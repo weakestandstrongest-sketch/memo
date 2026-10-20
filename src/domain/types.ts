@@ -1,5 +1,5 @@
 /**
- * Core data model for My Universe.
+ * Core data model for Asterism.
  *
  * The note data (what the user wrote) is kept separate from the layout
  * (where each star sits on screen). Connections only reference note ids.

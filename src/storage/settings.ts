@@ -172,7 +172,7 @@ export function useSettings(): Settings {
   return useSyncExternalStore(subscribe, getSettings, getSettings);
 }
 
-/** "Forgot passcode": erases everything My Universe saved in this browser. */
+/** "Forgot passcode": erases everything Asterism saved in this browser. */
 export function eraseAllLocalData() {
   const store = browserStore() as Storage | null;
   if (!store) return;

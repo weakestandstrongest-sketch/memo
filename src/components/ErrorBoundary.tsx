@@ -14,7 +14,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('My Universe crashed:', error, info.componentStack);
+    console.error('Asterism crashed:', error, info.componentStack);
   }
 
   render() {

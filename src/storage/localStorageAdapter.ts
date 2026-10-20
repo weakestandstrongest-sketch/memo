@@ -2,6 +2,7 @@ import type { UniverseData } from '../domain/types';
 import type { LoadResult, UniverseStorage } from './types';
 import { sanitizeUniverse } from './validate';
 
+// Keys keep the app's first name ("My Universe"), so data saved before the rename is still found.
 export const STORAGE_KEY = 'my-universe:data:v1';
 const BACKUP_PREFIX = 'my-universe:backup:';
 

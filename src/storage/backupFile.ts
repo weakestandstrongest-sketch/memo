@@ -10,7 +10,7 @@ import { sanitizeUniverse } from './validate';
 export type ExportResult = 'downloaded' | 'shared' | 'cancelled';
 
 function backupFileName() {
-  return `my-universe-${new Date().toISOString().slice(0, 10)}.json`;
+  return `asterism-${new Date().toISOString().slice(0, 10)}.json`;
 }
 
 /** True on iPhone / iPad (including iPads that report themselves as a Mac). */
@@ -26,6 +26,7 @@ export function isAppleMobile(): boolean {
  * - Elsewhere (Windows Chrome / Edge, …): downloads the file to the Downloads folder.
  */
 export async function exportBackup(data: UniverseData): Promise<ExportResult> {
+  // "my-universe" (the app's first name) stays, so backups from before and after the rename match.
   const json = JSON.stringify({ app: 'my-universe', exportedAt: new Date().toISOString(), ...data }, null, 2);
   const name = backupFileName();
 

@@ -1,4 +1,4 @@
-# Builds, tests and publishes My Universe to GitHub Pages (free HTTPS hosting).
+# Builds, tests and publishes Asterism to GitHub Pages (free HTTPS hosting).
 #
 # - Every push / pull request: type-check, unit tests and a production build.
 # - Pushes to the repository's default branch: the build is also published to
