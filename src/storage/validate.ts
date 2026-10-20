@@ -82,6 +82,7 @@ export function sanitizeUniverse(raw: unknown, now = new Date()): SanitizeResult
     };
     if (item.sample === true) note.sample = true;
     if (item.pinned === true) note.pinned = true;
+    if (isValidDate(item.lastOpenedAt)) note.lastOpenedAt = item.lastOpenedAt;
     if (typeof item.groupId === 'string') {
       if (groupIds.has(item.groupId)) note.groupId = item.groupId;
       else repairs++; // points at a group that no longer exists

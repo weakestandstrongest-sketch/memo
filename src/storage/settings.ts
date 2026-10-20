@@ -34,15 +34,24 @@ export interface BackupSettings {
   firstSeenAt: string;
 }
 
+export interface DisplaySettings {
+  /** Selecting a star gathers its connected stars around it (display only). */
+  focusMode: boolean;
+  /** The sky color follows the time of day. */
+  timeSky: boolean;
+}
+
 export interface Settings {
   lock: LockSettings;
   backup: BackupSettings;
+  display: DisplaySettings;
 }
 
 export function defaultSettings(now = new Date()): Settings {
   return {
     lock: { enabled: false, hash: '', salt: '', length: 0, autoLockMinutes: 5 },
     backup: { intervalDays: 7, lastBackupAt: null, snoozedUntil: null, firstSeenAt: now.toISOString() },
+    display: { focusMode: true, timeSky: true },
   };
 }
 
@@ -55,6 +64,7 @@ export function sanitizeSettings(raw: unknown, now = new Date()): Settings {
   if (!isObject(raw)) return d;
   const lock = isObject(raw.lock) ? raw.lock : {};
   const backup = isObject(raw.backup) ? raw.backup : {};
+  const display = isObject(raw.display) ? raw.display : {};
 
   const hash = typeof lock.hash === 'string' && /^[0-9a-f]{64}$/.test(lock.hash) ? lock.hash : '';
   const salt = typeof lock.salt === 'string' && lock.salt.length > 0 ? lock.salt : '';
@@ -80,6 +90,10 @@ export function sanitizeSettings(raw: unknown, now = new Date()): Settings {
       lastBackupAt: isDate(backup.lastBackupAt) ? backup.lastBackupAt : null,
       snoozedUntil: isDate(backup.snoozedUntil) ? backup.snoozedUntil : null,
       firstSeenAt: isDate(backup.firstSeenAt) ? backup.firstSeenAt : d.backup.firstSeenAt,
+    },
+    display: {
+      focusMode: typeof display.focusMode === 'boolean' ? display.focusMode : d.display.focusMode,
+      timeSky: typeof display.timeSky === 'boolean' ? display.timeSky : d.display.timeSky,
     },
   };
 }

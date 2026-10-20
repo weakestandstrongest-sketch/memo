@@ -138,6 +138,42 @@ export function SettingsDialog({ onClose, onExport, onToast }: SettingsDialogPro
         <p className="settings-note">{t.backupNote}</p>
       </section>
 
+      <section className="settings-section" aria-labelledby="settings-display">
+        <h3 id="settings-display" className="section-title">
+          {t.displayHeading}
+        </h3>
+        <label className="switch-row">
+          <span className="switch-text">
+            <span className="switch-label">{t.focusMode}</span>
+            <span className="settings-note">{t.focusModeText}</span>
+          </span>
+          <input
+            type="checkbox"
+            className="switch"
+            checked={settings.display.focusMode}
+            onChange={(e) => {
+              const on = e.target.checked;
+              save((s) => ({ ...s, display: { ...s.display, focusMode: on } }));
+            }}
+          />
+        </label>
+        <label className="switch-row">
+          <span className="switch-text">
+            <span className="switch-label">{t.timeSky}</span>
+            <span className="settings-note">{t.timeSkyText}</span>
+          </span>
+          <input
+            type="checkbox"
+            className="switch"
+            checked={settings.display.timeSky}
+            onChange={(e) => {
+              const on = e.target.checked;
+              save((s) => ({ ...s, display: { ...s.display, timeSky: on } }));
+            }}
+          />
+        </label>
+      </section>
+
       <p className="settings-note settings-device-note">{t.deviceNote}</p>
     </Modal>
   );

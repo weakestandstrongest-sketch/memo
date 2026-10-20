@@ -24,9 +24,12 @@ import {
 import { CATEGORY_LIST } from '../../domain/categories';
 import { ja } from '../../i18n/ja';
 import { galaxyCircles, type GalaxyCircle } from '../../domain/groups';
-import { boundsOf, type Bounds } from '../../domain/layout';
-import type { Position, UniverseData } from '../../domain/types';
-import { degreeMap, neighborIds } from '../../domain/universe';
+import { boundsOf, focusRing, type Bounds } from '../../domain/layout';
+import type { Layout, Position, UniverseData } from '../../domain/types';
+import type { SkyPhase } from '../../utils/sky';
+import { GalaxyArt } from './GalaxyArt';
+import { ShootingStar } from './ShootingStar';
+import { degreeMap, freshness, neighborIds } from '../../domain/universe';
 import { StarField, Twinkles } from './StarField';
 import { displayWidth, truncateByWidth } from '../../utils/format';
 import { pickVisibleLabels, type LabelCandidate } from './labels';
@@ -76,6 +79,16 @@ interface UniverseProps {
   onMoveEnd(id: string): void;
   /** Touch: the user swiped right from the left edge of the screen. */
   onEdgeSwipe?(): void;
+  /** Gather the selected star's connected stars around it (display only). */
+  focusMode: boolean;
+  /** "History" playback: stars are born as they appear. */
+  historyMode?: boolean;
+  /** Sky color for the time of day, or null for the default night sky. */
+  sky: SkyPhase | null;
+  /** A star was dropped onto another star: connect them (and put the dragged star back at `from`). */
+  onDropConnect(draggedId: string, targetId: string, from: Position): void;
+  /** Long press (touch) or double-click (mouse) on empty space: create a star there. */
+  onBackgroundLongPress(at: Position): void;
 }
 
 const MIN_ZOOM = 0.2;
@@ -96,7 +109,16 @@ type Gesture =
       grabDY: number;
       timer: number | undefined;
     }
-  | { kind: 'drag-star'; id: string; pointerId: number; grabDX: number; grabDY: number; moved: boolean }
+  | {
+      kind: 'drag-star';
+      id: string;
+      pointerId: number;
+      grabDX: number;
+      grabDY: number;
+      moved: boolean;
+      /** Where the star was before the drag (it returns there when dropped onto another star). */
+      from: Position;
+    }
   | {
       kind: 'pan';
       pointerId: number;
@@ -107,6 +129,8 @@ type Gesture =
       lastY: number;
       startTime: number;
       moved: boolean;
+      /** Long-press timer (touch) for "create a star here". */
+      timer: number | undefined;
     }
   | { kind: 'pinch'; startDist: number; startK: number; anchor: Position }
   | { kind: 'edge'; pointerId: number; startX: number; startY: number }
@@ -114,6 +138,12 @@ type Gesture =
 
 /** Touches starting this close (px) to the left edge can open the sidebar. */
 const EDGE_ZONE = 24;
+/** Hold this long on empty space (touch) to create a star there. */
+const LONG_PRESS_MS = 550;
+/** Drop a dragged star this close (px on screen) to another star to connect them. */
+const DROP_DISTANCE_PX = 30;
+const FOCUS_ANIMATION_MS = 480;
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
 /** Star radius grows a little with the number of connections and note length. */
 function starSize(degree: number, bodyLength: number): number {
@@ -131,6 +161,10 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [liftedId, setLiftedId] = useState<string | null>(null);
   const [panning, setPanning] = useState(false);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const dropTargetRef = useRef<string | null>(null);
+  const [ripples, setRipples] = useState<Array<{ key: number; x: number; y: number }>>([]);
+  const [shots, setShots] = useState<Array<{ key: string; sourceId: string; targetId: string }>>([]);
   const coarsePointer = useMemo(() => window.matchMedia?.('(pointer: coarse)').matches ?? false, []);
   // The fade-in animation only plays when the page first opens.
   const [introDone, setIntroDone] = useState(false);
@@ -153,6 +187,84 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
   );
   const galaxiesRef = useRef<GalaxyCircle[]>(galaxies);
   galaxiesRef.current = galaxies;
+
+  // --- Focus mode: displayed positions can differ from the saved layout -----------
+  // Stars the user dragged away while focused keep their own position.
+  const released = useRef<Set<string>>(new Set());
+  const [releasedVersion, setReleasedVersion] = useState(0);
+  useEffect(() => {
+    released.current = new Set();
+    setReleasedVersion((v) => v + 1);
+  }, [selectedId]);
+
+  const focusOverrides = useMemo<Layout>(() => {
+    if (!props.focusMode || !selectedId || connectSourceId || props.historyMode) return {};
+    const ids = [...neighborIds(data.connections, selectedId)].filter((id) => !released.current.has(id));
+    return focusRing(data.layout, selectedId, ids);
+    // releasedVersion: recompute after a star was released
+  }, [props.focusMode, props.historyMode, selectedId, connectSourceId, data.connections, data.layout, releasedVersion]);
+
+  // Animate between the saved positions and the focus ring whenever the ring's members change.
+  const overrideKey = `${selectedId}|${Object.keys(focusOverrides).sort().join(',')}`;
+  const displayRef = useRef<Layout>(data.layout);
+  const [morph, setMorph] = useState<{ from: Layout; t: number } | null>(null);
+  const morphFrame = useRef(0);
+  const prevOverrideIds = useRef<string[]>([]);
+  useLayoutEffect(() => {
+    const ids = new Set([...prevOverrideIds.current, ...Object.keys(focusOverrides)]);
+    prevOverrideIds.current = Object.keys(focusOverrides);
+    if (ids.size === 0) return;
+    const from: Layout = {};
+    for (const id of ids) if (displayRef.current[id]) from[id] = displayRef.current[id];
+    cancelAnimationFrame(morphFrame.current);
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const begin = performance.now();
+    const step = (now: number) => {
+      const t = reduceMotion ? 1 : Math.min(1, (now - begin) / FOCUS_ANIMATION_MS);
+      setMorph(t >= 1 ? null : { from, t });
+      if (t < 1) morphFrame.current = requestAnimationFrame(step);
+    };
+    setMorph({ from, t: 0 });
+    morphFrame.current = requestAnimationFrame(step);
+    // Only when the set of focused stars changes, not on every move.
+  }, [overrideKey]);
+  useEffect(() => () => cancelAnimationFrame(morphFrame.current), []);
+
+  /** Where each star is drawn right now (saved layout + focus ring + animation). */
+  const displayLayout = useMemo<Layout>(() => {
+    if (Object.keys(focusOverrides).length === 0 && !morph) return data.layout;
+    const out: Layout = { ...data.layout, ...focusOverrides };
+    if (morph) {
+      const e = easeOutCubic(morph.t);
+      for (const id in morph.from) {
+        const target = out[id];
+        if (!target || id === liftedId) continue;
+        const f = morph.from[id];
+        out[id] = { x: f.x + (target.x - f.x) * e, y: f.y + (target.y - f.y) * e };
+      }
+    }
+    return out;
+  }, [data.layout, focusOverrides, morph, liftedId]);
+  displayRef.current = displayLayout;
+
+  // --- Shooting star whenever a connection is added ------------------------------
+  const prevConnectionIds = useRef<Set<string> | null>(null);
+  const prevHistoryMode = useRef(props.historyMode);
+  useEffect(() => {
+    const ids = new Set(data.connections.map((c) => c.id));
+    const prev = prevConnectionIds.current;
+    prevConnectionIds.current = ids;
+    const switchedMode = prevHistoryMode.current !== props.historyMode;
+    prevHistoryMode.current = props.historyMode;
+    if (!prev || switchedMode) return; // first render / entering or leaving history: nothing is "new"
+    const added = data.connections.filter((c) => !prev.has(c.id));
+    if (added.length === 0 || added.length > 4) return; // e.g. an import: no fireworks
+    setShots((s) => [
+      ...s,
+      ...added.map((c) => ({ key: `${c.id}-${Date.now()}`, sourceId: c.sourceId, targetId: c.targetId })),
+    ]);
+  }, [data.connections, props.historyMode]);
+
   insetsRef.current = insets;
   propsRef.current = props;
   sizeRef.current = size;
@@ -376,13 +488,50 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
 
   const clearPressTimer = () => {
     const g = gesture.current;
-    if (g.kind === 'press-star' && g.timer !== undefined) window.clearTimeout(g.timer);
+    if ((g.kind === 'press-star' || g.kind === 'pan') && g.timer !== undefined) window.clearTimeout(g.timer);
   };
 
-  const finishStarDrag = () => {
+  const setDropTarget = (id: string | null) => {
+    if (dropTargetRef.current === id) return;
+    dropTargetRef.current = id;
+    setDropTargetId(id);
+  };
+
+  const finishStarDrag = (cancelled = false) => {
     const g = gesture.current;
-    if (g.kind === 'drag-star') propsRef.current.onMoveEnd(g.id);
+    if (g.kind === 'drag-star') {
+      const target = dropTargetRef.current;
+      if (target && !cancelled) propsRef.current.onDropConnect(g.id, target, g.from);
+      else propsRef.current.onMoveEnd(g.id);
+    }
+    setDropTarget(null);
     setLiftedId(null);
+  };
+
+  /** Picks the star up. A star shown on the focus ring keeps that position from now on. */
+  const beginDrag = (g: Extract<Gesture, { kind: 'press-star' }>, moved: boolean) => {
+    const shown = displayRef.current[g.id];
+    if (shown && focusOverrides[g.id]) {
+      released.current.add(g.id);
+      setReleasedVersion((v) => v + 1);
+      propsRef.current.onMoveStar(g.id, shown);
+    }
+    gesture.current = {
+      kind: 'drag-star',
+      id: g.id,
+      pointerId: g.pointerId,
+      grabDX: g.grabDX,
+      grabDY: g.grabDY,
+      moved,
+      from: shown ?? layoutRef.current[g.id] ?? { x: 0, y: 0 },
+    };
+    setLiftedId(g.id);
+  };
+
+  const addRipple = (at: Position) => {
+    const key = Date.now() + Math.random();
+    setRipples((r) => [...r, { key, ...at }]);
+    window.setTimeout(() => setRipples((r) => r.filter((x) => x.key !== key)), 800);
   };
 
   const startPinch = () => {
@@ -400,7 +549,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
   };
 
   const startPan = (pointerId: number, p: Position, touch: boolean, moved: boolean) => {
-    gesture.current = {
+    const g: Gesture = {
       kind: 'pan',
       pointerId,
       touch,
@@ -410,7 +559,21 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
       lastY: p.y,
       startTime: performance.now(),
       moved,
+      timer: undefined,
     };
+    if (touch && !moved && !propsRef.current.historyMode) {
+      // Press and hold on empty space → create a star right there.
+      g.timer = window.setTimeout(() => {
+        const cur = gesture.current;
+        if (cur.kind === 'pan' && cur.pointerId === pointerId && !cur.moved && pointers.current.size === 1) {
+          gesture.current = { kind: 'consumed', pointerId };
+          const at = screenToWorld({ x: cur.startX, y: cur.startY });
+          addRipple(at);
+          propsRef.current.onBackgroundLongPress(at);
+        }
+      }, LONG_PRESS_MS);
+    }
+    gesture.current = g;
   };
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
@@ -440,7 +603,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
 
     const starEl = (e.target as Element).closest?.('[data-note-id]');
     const id = starEl?.getAttribute('data-note-id');
-    const pos = id ? layoutRef.current[id] : undefined;
+    const pos = id ? displayRef.current[id] : undefined;
 
     if (id && pos) {
       const w = screenToWorld(p);
@@ -455,20 +618,12 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         grabDY: pos.y - w.y,
         timer: undefined,
       };
-      if (touch) {
+      if (touch && !propsRef.current.historyMode) {
         // Press and hold to pick the star up.
         g.timer = window.setTimeout(() => {
           const cur = gesture.current;
           if (cur.kind === 'press-star' && cur.pointerId === g.pointerId) {
-            gesture.current = {
-              kind: 'drag-star',
-              id: cur.id,
-              pointerId: cur.pointerId,
-              grabDX: cur.grabDX,
-              grabDY: cur.grabDY,
-              moved: false,
-            };
-            setLiftedId(cur.id);
+            beginDrag(cur, false);
             navigator.vibrate?.(10);
           }
         }, HOLD_TO_DRAG_MS);
@@ -524,14 +679,13 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         const slop = g.touch ? 10 : 4;
         if (Math.hypot(p.x - g.startX, p.y - g.startY) <= slop) return;
         clearPressTimer();
-        if (g.touch) {
-          // Finger moved before the hold finished → the user wants to pan.
+        if (g.touch || propsRef.current.historyMode) {
+          // Finger moved before the hold finished (or replaying history) → the user wants to pan.
           startPan(e.pointerId, { x: g.startX, y: g.startY }, true, true);
           setPanning(true);
           applyPan(p);
         } else {
-          gesture.current = { kind: 'drag-star', id: g.id, pointerId: g.pointerId, grabDX: g.grabDX, grabDY: g.grabDY, moved: true };
-          setLiftedId(g.id);
+          beginDrag(g, true);
           moveDraggedStar(p);
         }
         return;
@@ -546,6 +700,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         if (g.pointerId !== e.pointerId) return;
         if (!g.moved && Math.hypot(p.x - g.startX, p.y - g.startY) > (g.touch ? 8 : 3)) {
           g.moved = true;
+          if (g.timer !== undefined) window.clearTimeout(g.timer);
           setPanning(true);
         }
         applyPan(p);
@@ -567,10 +722,26 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
     const g = gesture.current;
     if (g.kind !== 'drag-star') return;
     const w = screenToWorld(p);
-    propsRef.current.onMoveStar(g.id, {
+    const next = {
       x: Math.round((w.x + g.grabDX) * 10) / 10,
       y: Math.round((w.y + g.grabDY) * 10) / 10,
-    });
+    };
+    propsRef.current.onMoveStar(g.id, next);
+
+    // Is the star being dropped onto another star? (→ connect them)
+    const k = viewRef.current.k;
+    let best: string | null = null;
+    let bestDist = DROP_DISTANCE_PX;
+    const shown = displayRef.current;
+    for (const id in shown) {
+      if (id === g.id) continue;
+      const d = Math.hypot(shown[id].x - next.x, shown[id].y - next.y) * k;
+      if (d < bestDist) {
+        bestDist = d;
+        best = id;
+      }
+    }
+    setDropTarget(best);
   };
 
   const endPointer = (e: ReactPointerEvent<SVGSVGElement>, cancelled: boolean) => {
@@ -607,7 +778,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
       }
       case 'drag-star': {
         if (g.pointerId !== e.pointerId) return;
-        finishStarDrag();
+        finishStarDrag(cancelled);
         gesture.current = { kind: 'idle' };
         // Held but never moved → treat as a tap.
         if (!g.moved && !cancelled) propsRef.current.onStarTap(g.id);
@@ -615,6 +786,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
       }
       case 'pan': {
         if (g.pointerId !== e.pointerId) return;
+        clearPressTimer();
         gesture.current = { kind: 'idle' };
         setPanning(false);
         if (!g.moved && !cancelled && performance.now() - g.startTime < 600) {
@@ -653,6 +825,18 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
   );
   const noteIndex = useMemo(() => new Map(data.notes.map((n, i) => [n.id, i])), [data.notes]);
 
+  // Recently used stars shine brighter. Re-evaluated every 10 minutes.
+  const [freshClock, setFreshClock] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setFreshClock(Date.now()), 10 * 60 * 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const freshnessOf = useMemo(
+    // Rounded to 0.05 so stars only re-render when the difference is visible.
+    () => new Map(data.notes.map((n) => [n.id, Math.round(freshness(n, freshClock) * 20) / 20])),
+    [data.notes, freshClock],
+  );
+
   const emphasisOf = (id: string): StarEmphasis => {
     if (id === focusId) return 'selected';
     if (matchIds) return matchIds.has(id) ? (neighbors.has(id) ? 'neighbor' : 'match') : 'dimmed';
@@ -674,7 +858,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
     const rank: Record<StarEmphasis, number> = { selected: 0, neighbor: 1, match: 2, normal: 3, faded: 4, dimmed: 9 };
     const candidates: LabelCandidate[] = [];
     for (const note of data.notes) {
-      const pos = data.layout[note.id];
+      const pos = displayLayout[note.id];
       const emphasis = emphasisOf(note.id);
       if (!pos || emphasis === 'dimmed') continue;
       const degree = degrees.get(note.id) ?? 0;
@@ -692,7 +876,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
     }
     return pickVisibleLabels(candidates);
     // emphasisOf only depends on the values listed here.
-  }, [data.notes, data.layout, degrees, view.k, starScale, labelSize, focusId, matchIds, neighbors]);
+  }, [data.notes, displayLayout, degrees, view.k, starScale, labelSize, focusId, matchIds, neighbors]);
   const categoryOf = useMemo(() => new Map(data.notes.map((n) => [n.id, n.category])), [data.notes]);
 
   // Selected / hovered stars are drawn last so they sit on top.
@@ -705,7 +889,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
   const cursor = liftedId || panning ? 'grabbing' : hoverId ? 'pointer' : 'grab';
 
   return (
-    <div ref={wrapRef} className="universe">
+    <div ref={wrapRef} className={`universe ${props.sky ? `sky-${props.sky}` : ''}`}>
       <div
         className="nebula"
         aria-hidden="true"
@@ -729,6 +913,20 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
           if (e.pointerType === 'mouse' && !pointers.current.has(e.pointerId)) setHoverId(null);
         }}
         onContextMenu={(e) => e.preventDefault()}
+        onDoubleClick={(e) => {
+          if (props.historyMode) return;
+          // Pointer capture makes the event target the background, so check by distance:
+          // a double-click on (or right next to) a star must not create a new one.
+          const p = localPoint(e);
+          const v = viewRef.current;
+          const shown = displayRef.current;
+          for (const id in shown) {
+            if (Math.hypot(shown[id].x * v.k + v.x - p.x, shown[id].y * v.k + v.y - p.y) < 26) return;
+          }
+          const at = screenToWorld(p);
+          addRipple(at);
+          propsRef.current.onBackgroundLongPress(at);
+        }}
       >
         <defs>
           {CATEGORY_LIST.map((c) => (
@@ -747,48 +945,36 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
           ))}
           {galaxies.map((c) => (
             <radialGradient key={`galaxy-${c.group.id}`} id={`galaxy-${c.group.id}`}>
-              <stop offset="0%" stopColor={c.group.color} stopOpacity={0.2} />
-              <stop offset="55%" stopColor={c.group.color} stopOpacity={0.08} />
-              <stop offset="100%" stopColor={c.group.color} stopOpacity={0.015} />
+              <stop offset="0%" stopColor={c.group.color} stopOpacity={0.22} />
+              <stop offset="45%" stopColor={c.group.color} stopOpacity={0.08} />
+              <stop offset="100%" stopColor={c.group.color} stopOpacity={0.01} />
+            </radialGradient>
+          ))}
+          {galaxies.map((c) => (
+            <radialGradient key={`galaxy-core-${c.group.id}`} id={`galaxy-core-${c.group.id}`}>
+              <stop offset="0%" stopColor="#ffffff" stopOpacity={0.9} />
+              <stop offset="40%" stopColor={c.group.color} stopOpacity={0.55} />
+              <stop offset="100%" stopColor={c.group.color} stopOpacity={0} />
             </radialGradient>
           ))}
         </defs>
 
         <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
           <g className="galaxies" aria-hidden="true">
-            {galaxies.map((c) => {
-              const dim = matchIds !== null && !data.notes.some((n) => n.groupId === c.group.id && matchIds.has(n.id));
-              const labelPx = 12.5 / view.k; // ~12.5px on screen at any zoom
-              return (
-                <g key={c.group.id} className={`galaxy ${dim ? 'is-dim' : ''}`} style={{ color: c.group.color }}>
-                  <circle cx={c.cx} cy={c.cy} r={c.r} fill={`url(#galaxy-${c.group.id})`} />
-                  <ellipse
-                    className="galaxy-arm"
-                    cx={c.cx}
-                    cy={c.cy}
-                    rx={c.r * 0.72}
-                    ry={c.r * 0.28}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <circle className="galaxy-ring" cx={c.cx} cy={c.cy} r={c.r} vectorEffect="non-scaling-stroke" />
-                  <text
-                    className="galaxy-label"
-                    x={c.cx}
-                    y={c.cy - c.r - labelPx * 0.6}
-                    textAnchor="middle"
-                    style={{ fontSize: labelPx }}
-                  >
-                    {c.group.name}
-                  </text>
-                </g>
-              );
-            })}
+            {galaxies.map((c) => (
+              <GalaxyArt
+                key={c.group.id}
+                circle={c}
+                zoom={view.k}
+                dim={matchIds !== null && !data.notes.some((n) => n.groupId === c.group.id && matchIds.has(n.id))}
+              />
+            ))}
           </g>
 
           <g className="links">
             {data.connections.map((c) => {
-              const a = data.layout[c.sourceId];
-              const b = data.layout[c.targetId];
+              const a = displayLayout[c.sourceId];
+              const b = displayLayout[c.targetId];
               if (!a || !b) return null;
               const touchesFocus = focusId !== null && (c.sourceId === focusId || c.targetId === focusId);
               const dim = matchIds !== null && !(matchIds.has(c.sourceId) && matchIds.has(c.targetId));
@@ -805,9 +991,27 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
             })}
           </g>
 
+          <g className="shots">
+            {shots.map((s) => (
+              <ShootingStar
+                key={s.key}
+                zoom={view.k}
+                getFrom={() => displayRef.current[s.sourceId]}
+                getTo={() => displayRef.current[s.targetId]}
+                onDone={() => setShots((all) => all.filter((x) => x.key !== s.key))}
+              />
+            ))}
+          </g>
+
+          <g className="ripples" aria-hidden="true">
+            {ripples.map((r) => (
+              <circle key={r.key} className="spawn-ripple" cx={r.x} cy={r.y} r={30 / view.k} vectorEffect="non-scaling-stroke" />
+            ))}
+          </g>
+
           <g className="stars">
             {orderedNotes.map((note) => {
-              const pos = data.layout[note.id];
+              const pos = displayLayout[note.id];
               if (!pos) return null;
               const emphasis = emphasisOf(note.id);
               const size = starSize(degrees.get(note.id) ?? 0, note.body.length);
@@ -824,10 +1028,12 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
                   showLabel={visibleLabels.has(note.id)}
                   hovered={hoverId === note.id}
                   lifted={liftedId === note.id}
-                  isNew={newStarId === note.id}
+                  isNew={newStarId === note.id || Boolean(props.historyMode)}
+                  dropTarget={dropTargetId === note.id}
                   labelSize={labelSize}
                   intro={!introDone}
                   introIndex={noteIndex.get(note.id) ?? 0}
+                  freshness={freshnessOf.get(note.id) ?? 1}
                   onKeyActivate={onKeyActivate}
                 />
               );

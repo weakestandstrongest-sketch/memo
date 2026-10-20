@@ -9,12 +9,21 @@ interface DataMenuProps {
   onFitAll: () => void;
   onShowHelp: () => void;
   onOpenSettings: () => void;
+  onOpenHistory: () => void;
   /** Only set while the passcode lock is on. */
   onLockNow?: () => void;
 }
 
 /** "⋯" menu with view and backup options. */
-export function DataMenu({ onExport, onImportFile, onFitAll, onShowHelp, onOpenSettings, onLockNow }: DataMenuProps) {
+export function DataMenu({
+  onExport,
+  onImportFile,
+  onFitAll,
+  onShowHelp,
+  onOpenSettings,
+  onOpenHistory,
+  onLockNow,
+}: DataMenuProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -56,6 +65,9 @@ export function DataMenu({ onExport, onImportFile, onFitAll, onShowHelp, onOpenS
         <div className="menu-popover" role="menu">
           <button type="button" role="menuitem" className="menu-item" onClick={run(onFitAll)}>
             {ja.menu.fitAll}
+          </button>
+          <button type="button" role="menuitem" className="menu-item" onClick={run(onOpenHistory)}>
+            {ja.menu.history}
           </button>
           <button type="button" role="menuitem" className="menu-item" onClick={run(onShowHelp)}>
             {ja.menu.help}

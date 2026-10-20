@@ -175,6 +175,13 @@ export function disconnect(data: UniverseData, connectionId: string): UniverseDa
 // Positions
 // ---------------------------------------------------------------------------
 
+/** Remembers that a note was opened just now (does not count as an edit). */
+export function markOpened(data: UniverseData, id: string, now = new Date()): UniverseData {
+  if (!data.notes.some((n) => n.id === id)) return data;
+  const iso = now.toISOString();
+  return { ...data, notes: data.notes.map((n) => (n.id === id ? { ...n, lastOpenedAt: iso } : n)) };
+}
+
 export function moveNote(data: UniverseData, id: string, position: Position): UniverseData {
   if (!data.layout[id]) return data;
   return { ...data, layout: { ...data.layout, [id]: position } };
@@ -218,6 +225,28 @@ export function linkedNotes(data: UniverseData, id: string): LinkedNote[] {
   return result.sort((x, y) => x.note.title.localeCompare(y.note.title, 'ja'));
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Most recent time the note was written, edited or opened. */
+export function lastTouched(note: Note): number {
+  return Math.max(
+    Date.parse(note.createdAt) || 0,
+    Date.parse(note.updatedAt) || 0,
+    note.lastOpenedAt ? Date.parse(note.lastOpenedAt) || 0 : 0,
+  );
+}
+
+/**
+ * How "fresh" a star is: 1 = touched within the last day,
+ * fading slowly (on a log scale) to 0.4 for stars untouched for ~2 months or more.
+ */
+export function freshness(note: Note, now = Date.now()): number {
+  const days = Math.max(0, (now - lastTouched(note)) / DAY_MS);
+  if (days <= 1) return 1;
+  const f = 1 - (0.6 * Math.log(days)) / Math.log(60);
+  return Math.min(1, Math.max(0.4, f));
+}
+
 /** Number of connections per note id. */
 export function degreeMap(connections: Connection[]): Map<string, number> {
   const map = new Map<string, number>();
@@ -246,4 +275,30 @@ export function matchesQuery(note: Note, query: string): boolean {
   const q = normalizeForSearch(query.trim());
   if (!q) return true;
   return normalizeForSearch(note.title).includes(q) || normalizeForSearch(note.body).includes(q);
+}
+
+// ---------------------------------------------------------------------------
+// History ("宇宙の歴史")
+// ---------------------------------------------------------------------------
+
+/** The universe as it was at time `t`: only stars and connections that existed then. */
+export function universeAt(data: UniverseData, t: number): UniverseData {
+  const notes = data.notes.filter((n) => Date.parse(n.createdAt) <= t);
+  const ids = new Set(notes.map((n) => n.id));
+  const connections = data.connections.filter(
+    (c) => ids.has(c.sourceId) && ids.has(c.targetId) && Date.parse(c.createdAt) <= t,
+  );
+  const layout: UniverseData['layout'] = {};
+  for (const id of ids) if (data.layout[id]) layout[id] = data.layout[id];
+  return { ...data, notes, connections, layout };
+}
+
+/** First and last moment worth showing in the history timeline. */
+export function historyRange(data: UniverseData, now = Date.now()): { start: number; end: number } | null {
+  if (data.notes.length === 0) return null;
+  const times = data.notes.map((n) => Date.parse(n.createdAt)).filter(Number.isFinite);
+  const start = Math.min(...times);
+  const end = Math.max(now, ...times, ...data.connections.map((c) => Date.parse(c.createdAt)).filter(Number.isFinite));
+  // Start just before the first star, so playback begins with an empty sky.
+  return { start: start - Math.max(1000, (end - start) * 0.02), end };
 }

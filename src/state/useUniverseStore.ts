@@ -14,6 +14,7 @@ import {
   connectNotes,
   deleteNote,
   disconnect,
+  markOpened,
   moveNote,
   settleNote,
   updateNote,
@@ -35,7 +36,8 @@ type Action =
   | { type: 'add-group'; group: Group }
   | { type: 'update-group'; id: string; patch: { name?: string; color?: string } }
   | { type: 'delete-group'; id: string }
-  | { type: 'pin'; id: string; pinned: boolean };
+  | { type: 'pin'; id: string; pinned: boolean }
+  | { type: 'opened'; id: string };
 
 function reducer(state: UniverseData, action: Action): UniverseData {
   switch (action.type) {
@@ -63,6 +65,8 @@ function reducer(state: UniverseData, action: Action): UniverseData {
       return deleteGroup(state, action.id);
     case 'pin':
       return setPinned(state, action.id, action.pinned);
+    case 'opened':
+      return markOpened(state, action.id);
   }
 }
 
@@ -173,6 +177,10 @@ export function useUniverseStore(storage: UniverseStorage = defaultStorage) {
       },
       setPinned(id: string, pinned: boolean) {
         dispatch({ type: 'pin', id, pinned });
+      },
+      /** Records that a star was opened (makes it shine brighter for a while). */
+      markOpened(id: string) {
+        dispatch({ type: 'opened', id });
       },
     }),
     [],

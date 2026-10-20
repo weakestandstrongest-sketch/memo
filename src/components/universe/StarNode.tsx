@@ -39,6 +39,10 @@ interface StarNodeProps {
   intro: boolean;
   /** Index used to stagger the intro animation. */
   introIndex: number;
+  /** 1 = recently written/opened … 0.4 = untouched for a long time. */
+  freshness: number;
+  /** Another star is being dragged onto this one (dropping connects them). */
+  dropTarget?: boolean;
   onKeyActivate: (id: string) => void;
 }
 
@@ -60,6 +64,8 @@ export const StarNode = memo(function StarNode({
   isNew,
   intro,
   introIndex,
+  freshness,
+  dropTarget = false,
   onKeyActivate,
 }: StarNodeProps) {
   const category = CATEGORIES[note.category];
@@ -78,6 +84,8 @@ export const StarNode = memo(function StarNode({
     hovered && 'is-hovered',
     lifted && 'is-lifted',
     isNew ? 'is-new' : intro && 'is-intro',
+    freshness >= 1 && 'is-today',
+    dropTarget && 'is-drop-target',
   ]
     .filter(Boolean)
     .join(' ');
@@ -92,13 +100,18 @@ export const StarNode = memo(function StarNode({
       aria-label={ja.star.ariaLabel(note.title, category.label, category.shapeName)}
       aria-pressed={emphasis === 'selected'}
       onKeyDown={onKeyDown}
-      style={{ ['--star-color' as string]: category.color, ['--intro-delay' as string]: `${Math.min(introIndex, 40) * 35}ms` }}
+      style={{
+        ['--star-color' as string]: category.color,
+        ['--intro-delay' as string]: `${Math.min(introIndex, 40) * 35}ms`,
+        ['--fresh' as string]: freshness,
+      }}
     >
       <g transform={`scale(${scale})`}>
         <g className="star-body">
           <circle className="star-hit" r={hitRadius} />
           <circle className="star-glow" r={size * 3} fill={`url(#glow-${note.category})`} />
           {isNew && <circle className="star-birth-ring" r={size * 1.6} />}
+          {dropTarget && <circle className="star-drop-ring" r={size * 2.2 + 4} />}
           {(emphasis === 'selected' || emphasis === 'match') && (
             <circle className="star-ring" r={size * 1.75 + 2} />
           )}
@@ -110,6 +123,11 @@ export const StarNode = memo(function StarNode({
               stroke={category.color}
             />
           </g>
+          {dropTarget && (
+            <text className="star-drop-label" y={-(size * 2.2 + 10)} textAnchor="middle" style={{ fontSize: labelSize }}>
+              {ja.star.dropToConnect}
+            </text>
+          )}
           {(showLabel || hovered) && (
             <text
               className="star-label"

@@ -23,6 +23,8 @@ export interface Note {
   updatedAt: string;
   /** True for the demo notes added on first launch. They can be deleted like any other note. */
   sample?: boolean;
+  /** ISO time the note was last opened (used to make recently used stars brighter). */
+  lastOpenedAt?: string;
   /** Pinned notes are listed first in the sidebar. */
   pinned?: boolean;
   /** The group (galaxy) this note belongs to. Undefined = no group. */

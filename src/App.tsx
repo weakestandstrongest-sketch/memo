@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CATEGORY_IDS, type CategoryId, type UniverseData } from './domain/types';
+import { CATEGORY_IDS, type CategoryId, type Position, type UniverseData } from './domain/types';
+import { formatDateTime } from './utils/format';
+import { skyPhase, type SkyPhase } from './utils/sky';
 import { GROUP_COLORS } from './domain/groups';
-import { linkedNotes, matchesQuery } from './domain/universe';
+import { historyRange, linkedNotes, matchesQuery, universeAt } from './domain/universe';
 import { ja } from './i18n/ja';
 import { useUniverseStore, type StorageNotice } from './state/useUniverseStore';
 import { exportBackup, readBackupFile } from './storage/backupFile';
@@ -18,17 +20,19 @@ import { DataMenu } from './components/DataMenu';
 import { DetailPanel } from './components/DetailPanel';
 import { GroupDialog } from './components/GroupDialog';
 import { HelpDialog } from './components/HelpDialog';
+import { HistoryBar } from './components/HistoryBar';
 import { NoteFormModal } from './components/NoteFormModal';
 import { SearchBox } from './components/SearchBox';
 import { SettingsDialog } from './components/SettingsDialog';
 import { Sidebar } from './components/Sidebar';
 import { Toast, type ToastMessage } from './components/Toast';
 import { TopBar } from './components/TopBar';
-import { CloseIcon, FitIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from './components/icons';
+import { CloseIcon, FitIcon, HistoryIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from './components/icons';
 import { Universe, type Insets, type UniverseHandle } from './components/universe/Universe';
 
 type Dialog =
-  | { kind: 'create' }
+  /** `at`: where to put the new star (long press / double-click), otherwise the screen centre. */
+  | { kind: 'create'; at?: Position }
   | { kind: 'edit'; id: string }
   | { kind: 'connect'; id: string }
   | { kind: 'delete'; id: string }
@@ -67,7 +71,8 @@ export default function App({ onLockNow }: AppProps) {
 
   // --- Layout mode ---------------------------------------------------------
   const compact = useMediaQuery('(max-width: 719px)');
-  const roomyFilters = useMediaQuery('(min-width: 900px) and (min-height: 560px)');
+  // Room for the category panel on the left (above the view buttons) — otherwise a popover is used.
+  const roomyFilters = useMediaQuery('(min-width: 900px) and (min-height: 600px)');
   const touch = useMediaQuery('(pointer: coarse)');
 
   // --- UI state --------------------------------------------------------------
@@ -76,6 +81,8 @@ export default function App({ onLockNow }: AppProps) {
   const [activeCats, setActiveCats] = useState<Set<CategoryId>>(() => new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  /** "宇宙の歴史" playback: the universe is shown as it was at `time`. */
+  const [history, setHistory] = useState<{ start: number; end: number; time: number; playing: boolean } | null>(null);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [connectSourceId, setConnectSourceId] = useState<string | null>(null);
   const [newStarId, setNewStarId] = useState<string | null>(null);
@@ -95,6 +102,13 @@ export default function App({ onLockNow }: AppProps) {
       document.removeEventListener('visibilitychange', onVisibility);
       window.clearInterval(timer);
     };
+  }, []);
+
+  // Sky color for the time of day (checked every 5 minutes).
+  const [sky, setSky] = useState<SkyPhase>(() => skyPhase());
+  useEffect(() => {
+    const t = window.setInterval(() => setSky(skyPhase()), 5 * 60 * 1000);
+    return () => window.clearInterval(t);
   }, []);
 
   const showToast = useCallback((text: string, tone: ToastMessage['tone'] = 'info') => {
@@ -160,12 +174,13 @@ export default function App({ onLockNow }: AppProps) {
   // --- Selection -------------------------------------------------------------
   const openStar = useCallback((id: string, jump: boolean) => {
     setSelectedId(id);
+    actions.markOpened(id);
     // Wait a moment so the panel has been measured before moving the camera.
     window.setTimeout(() => {
       if (jump) universeRef.current?.focusOn(id);
       else universeRef.current?.ensureVisible(id);
     }, 80);
-  }, []);
+  }, [actions]);
 
   const tryConnect = useCallback(
     (sourceId: string, targetId: string) => {
@@ -187,11 +202,34 @@ export default function App({ onLockNow }: AppProps) {
   const onStarTap = useCallback(
     (id: string) => {
       setFiltersOpen(false);
+      if (history) {
+        // While replaying history, a tap just tells when the star was born.
+        const note = notesById.get(id);
+        if (note) showToast(ja.history.born(note.title, formatDateTime(note.createdAt)));
+        return;
+      }
       if (connectSourceId) tryConnect(connectSourceId, id);
       else openStar(id, false);
     },
-    [connectSourceId, tryConnect, openStar],
+    [connectSourceId, tryConnect, openStar, history, notesById, showToast],
   );
+
+  const openHistory = () => {
+    const range = historyRange(data);
+    if (!range || data.notes.length < 2) {
+      showToast(ja.history.notEnough);
+      return;
+    }
+    setSelectedId(null);
+    setConnectSourceId(null);
+    setSidebarOpen(false);
+    setFiltersOpen(false);
+    universeRef.current?.fitAll(false); // frame the whole (final) universe first
+    setHistory({ ...range, time: range.start, playing: true });
+  };
+  const closeHistory = useCallback(() => setHistory(null), []);
+  const shownData = useMemo(() => (history ? universeAt(data, history.time) : data), [data, history]);
+  const historyTicks = useMemo(() => data.notes.map((n) => Date.parse(n.createdAt)).sort((a, b) => a - b), [data.notes]);
 
   const onBackgroundTap = useCallback(() => {
     setFiltersOpen(false);
@@ -199,6 +237,22 @@ export default function App({ onLockNow }: AppProps) {
   }, [connectSourceId]);
 
   const onMoveEnd = useCallback((id: string) => actions.settleStar(id), [actions]);
+
+  /** A star was dropped onto another one: put it back where it was and connect the two. */
+  const onDropConnect = useCallback(
+    (draggedId: string, targetId: string, from: Position) => {
+      actions.moveStar(draggedId, from);
+      const result = actions.connect(draggedId, targetId);
+      if (result.ok) {
+        const a = notesById.get(draggedId)?.title ?? '';
+        const b = notesById.get(targetId)?.title ?? '';
+        showToast(ja.toast.connected(a, b));
+      } else {
+        showToast(ja.connect.errors[result.reason], 'error');
+      }
+    },
+    [actions, notesById, showToast],
+  );
   const openSidebar = useCallback(() => {
     setFiltersOpen(false);
     setSidebarOpen(true);
@@ -295,13 +349,14 @@ export default function App({ onLockNow }: AppProps) {
   const editing = dialog?.kind === 'edit' ? notesById.get(dialog.id) : undefined;
   const connecting = dialog?.kind === 'connect' ? notesById.get(dialog.id) : undefined;
   const deleting = dialog?.kind === 'delete' ? notesById.get(dialog.id) : undefined;
-  const showFab = !(compact && detailVisible) && !connectSourceId;
+  const showFab = !(compact && detailVisible) && !connectSourceId && !history;
   const hasOwnNotes = data.notes.some((n) => !n.sample);
   const showReminder =
     isBackupDue(settings.backup, hasOwnNotes, new Date(clock)) &&
     !dialog &&
     !connectSourceId &&
     !sidebarOpen &&
+    !history &&
     !(compact && detailVisible);
 
   return (
@@ -311,13 +366,15 @@ export default function App({ onLockNow }: AppProps) {
         compact ? 'is-compact' : 'is-wide',
         touch && 'is-touch',
         detailVisible && (compact ? 'has-sheet' : 'has-side-panel'),
+        history && 'is-history',
       ]
         .filter(Boolean)
         .join(' ')}
     >
       <Universe
         ref={universeRef}
-        data={data}
+        data={shownData}
+        historyMode={Boolean(history)}
         selectedId={selectedId}
         matchIds={matchIds}
         connectSourceId={connectSourceId}
@@ -328,6 +385,13 @@ export default function App({ onLockNow }: AppProps) {
         onMoveStar={actions.moveStar}
         onMoveEnd={onMoveEnd}
         onEdgeSwipe={openSidebar}
+        focusMode={settings.display.focusMode}
+        sky={settings.display.timeSky ? sky : null}
+        onDropConnect={onDropConnect}
+        onBackgroundLongPress={(at) => {
+          setFiltersOpen(false);
+          setDialog({ kind: 'create', at });
+        }}
       />
 
       <TopBar
@@ -356,6 +420,7 @@ export default function App({ onLockNow }: AppProps) {
             onExport={runExport}
             onImportFile={importFile}
             onOpenSettings={() => setDialog({ kind: 'settings' })}
+            onOpenHistory={openHistory}
             onLockNow={onLockNow}
           />
         }
@@ -447,6 +512,16 @@ export default function App({ onLockNow }: AppProps) {
         )}
         <button
           type="button"
+          className={`icon-button glass ${history ? 'is-active' : ''}`}
+          aria-label={ja.history.open}
+          title={ja.history.open}
+          aria-pressed={Boolean(history)}
+          onClick={() => (history ? closeHistory() : openHistory())}
+        >
+          <HistoryIcon />
+        </button>
+        <button
+          type="button"
           className="icon-button glass"
           aria-label={ja.view.fitAll}
           title={ja.view.fitAll}
@@ -477,7 +552,21 @@ export default function App({ onLockNow }: AppProps) {
         />
       )}
 
-      {hintVisible && !showReminder && !selected && !connectSourceId && (
+      {history && (
+        <HistoryBar
+          start={history.start}
+          end={history.end}
+          time={history.time}
+          playing={history.playing}
+          ticks={historyTicks}
+          visibleCount={shownData.notes.length}
+          onTimeChange={(time) => setHistory((h) => (h ? { ...h, time } : h))}
+          onPlayingChange={(playing) => setHistory((h) => (h ? { ...h, playing } : h))}
+          onClose={closeHistory}
+        />
+      )}
+
+      {hintVisible && !showReminder && !history && !selected && !connectSourceId && (
         <div className="hint glass">
           <span>
             {touch ? ja.hint.touch : ja.hint.mouse}
@@ -528,7 +617,7 @@ export default function App({ onLockNow }: AppProps) {
           groups={data.groups}
           onClose={() => setDialog(null)}
           onSubmit={(values) => {
-            const near = universeRef.current?.visibleCenter() ?? { x: 0, y: 0 };
+            const near = dialog.at ?? universeRef.current?.visibleCenter() ?? { x: 0, y: 0 };
             const groupId = resolveGroupId(values);
             const note = actions.createNote({ ...values, groupId }, near);
             setDialog(null);

@@ -127,3 +127,10 @@ export const GalaxyIcon = () => (
     <ellipse cx="12" cy="12" rx="9" ry="4.5" transform="rotate(-25 12 12)" strokeDasharray="2.5 2.5" />
   </Icon>
 );
+export const HistoryIcon = () => (
+  <Icon>
+    <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
+    <path d="M3 4v4h4" />
+    <path d="M12 7.5V12l3 2" />
+  </Icon>
+);

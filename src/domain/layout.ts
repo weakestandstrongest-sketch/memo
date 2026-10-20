@@ -100,3 +100,35 @@ export function boundsOf(positions: Position[]): Bounds | null {
 function round(p: Position): Position {
   return { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 };
 }
+
+/**
+ * Focus mode (display only — nothing is saved): places the `neighbors` on a ring
+ * around `centerId`. Each star keeps roughly its original direction, so stars
+ * don't jump to the opposite side.
+ */
+export function focusRing(layout: Layout, centerId: string, neighbors: string[]): Layout {
+  const c = layout[centerId];
+  if (!c) return {};
+  const items = neighbors
+    .filter((id) => id !== centerId && layout[id])
+    .map((id) => ({ id, angle: Math.atan2(layout[id].y - c.y, layout[id].x - c.x) }))
+    .sort((a, b) => a.angle - b.angle);
+  const n = items.length;
+  if (n === 0) return {};
+  const radius = Math.min(320, Math.max(130, 95 + n * 16));
+  const step = (Math.PI * 2) / n;
+  // Rotate the evenly spaced ring so that, on average, stars move as little as possible.
+  let sx = 0;
+  let sy = 0;
+  items.forEach((it, i) => {
+    sx += Math.cos(it.angle - i * step);
+    sy += Math.sin(it.angle - i * step);
+  });
+  const offset = Math.atan2(sy, sx);
+  const result: Layout = {};
+  items.forEach((it, i) => {
+    const a = offset + i * step;
+    result[it.id] = { x: c.x + Math.cos(a) * radius, y: c.y + Math.sin(a) * radius };
+  });
+  return result;
+}

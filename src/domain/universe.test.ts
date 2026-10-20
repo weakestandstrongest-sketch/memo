@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MIN_STAR_DISTANCE } from './layout';
+import { focusRing, MIN_STAR_DISTANCE } from './layout';
 import { createSampleUniverse } from './sampleData';
 import {
   addNote,
@@ -9,11 +9,15 @@ import {
   deleteNote,
   disconnect,
   emptyUniverse,
+  freshness,
+  historyRange,
   linkedNotes,
+  markOpened,
   matchesQuery,
   moveNote,
   normalizeForSearch,
   settleNote,
+  universeAt,
   updateNote,
   validateDraft,
 } from './universe';
@@ -146,5 +150,76 @@ describe('sample universe', () => {
     for (const c of data.connections) {
       expect(ids.has(c.sourceId) && ids.has(c.targetId)).toBe(true);
     }
+  });
+});
+
+describe('freshness', () => {
+  const DAY = 86400000;
+  const now = Date.parse('2026-10-20T00:00:00.000Z');
+  const noteAt = (daysAgo: number, openedDaysAgo?: number) => ({
+    ...buildNote({ title: 't', body: '', category: 'ideas' }, new Date(now - daysAgo * DAY)),
+    ...(openedDaysAgo !== undefined ? { lastOpenedAt: new Date(now - openedDaysAgo * DAY).toISOString() } : {}),
+  });
+
+  it('is full for stars touched today and fades with age', () => {
+    expect(freshness(noteAt(0.5), now)).toBe(1);
+    const week = freshness(noteAt(7), now);
+    const month = freshness(noteAt(30), now);
+    expect(week).toBeLessThan(1);
+    expect(month).toBeLessThan(week);
+    expect(freshness(noteAt(400), now)).toBe(0.4);
+  });
+
+  it('opening a star makes it fresh again', () => {
+    expect(freshness(noteAt(90, 0.1), now)).toBe(1);
+    let data = addNote(emptyUniverse(), noteAt(90), { x: 0, y: 0 });
+    data = markOpened(data, data.notes[0].id, new Date(now));
+    expect(freshness(data.notes[0], now)).toBe(1);
+    expect(data.notes[0].updatedAt).not.toBe(data.notes[0].lastOpenedAt); // opening is not an edit
+  });
+});
+
+describe('focusRing', () => {
+  it('puts every neighbour on a ring around the centre, keeping its direction', () => {
+    const layout = { c: { x: 0, y: 0 }, east: { x: 900, y: 10 }, north: { x: 0, y: -50 }, west: { x: -400, y: 0 } };
+    const ring = focusRing(layout, 'c', ['east', 'north', 'west']);
+    const r = Math.hypot(ring.east.x, ring.east.y);
+    for (const id of ['north', 'west']) expect(Math.hypot(ring[id].x, ring[id].y)).toBeCloseTo(r, 5);
+    expect(ring.east.x).toBeGreaterThan(0); // still to the right
+    expect(ring.west.x).toBeLessThan(0); // still to the left
+    expect(ring.north.y).toBeLessThan(0); // still above
+    expect(ring.c).toBeUndefined();
+  });
+
+  it('returns nothing without neighbours or centre', () => {
+    expect(focusRing({ c: { x: 0, y: 0 } }, 'c', [])).toEqual({});
+    expect(focusRing({}, 'missing', ['a'])).toEqual({});
+  });
+});
+
+describe('universeAt (history)', () => {
+  it('shows only what existed at that moment', () => {
+    const t0 = new Date('2026-01-01T00:00:00.000Z');
+    const a = buildNote({ title: 'A', body: '', category: 'ideas' }, t0);
+    const b = buildNote({ title: 'B', body: '', category: 'ideas' }, new Date('2026-02-01T00:00:00.000Z'));
+    let data = addNote(addNote(emptyUniverse(), a, { x: 0, y: 0 }), b, { x: 0, y: 0 });
+    data = connectNotes(data, a.id, b.id, new Date('2026-03-01T00:00:00.000Z'));
+
+    const jan = universeAt(data, Date.parse('2026-01-15T00:00:00.000Z'));
+    expect(jan.notes.map((n) => n.title)).toEqual(['A']);
+    expect(Object.keys(jan.layout)).toEqual([a.id]);
+    expect(jan.connections).toHaveLength(0);
+
+    const feb = universeAt(data, Date.parse('2026-02-15T00:00:00.000Z'));
+    expect(feb.notes).toHaveLength(2);
+    expect(feb.connections).toHaveLength(0); // connected later
+
+    expect(universeAt(data, Date.parse('2026-03-02T00:00:00.000Z')).connections).toHaveLength(1);
+
+    const range = historyRange(data, Date.parse('2026-04-01T00:00:00.000Z'))!;
+    expect(range.start).toBeLessThan(Date.parse(a.createdAt));
+    expect(range.end).toBe(Date.parse('2026-04-01T00:00:00.000Z'));
+    expect(universeAt(data, range.start).notes).toHaveLength(0);
+    expect(historyRange(emptyUniverse())).toBeNull();
   });
 });
