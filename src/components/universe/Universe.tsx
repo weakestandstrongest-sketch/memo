@@ -21,7 +21,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { CATEGORY_LIST } from '../../domain/categories';
+import { CATEGORY_LIST, INK } from '../../domain/categories';
 import { ja } from '../../i18n/ja';
 import { galaxyCircles, type GalaxyCircle } from '../../domain/groups';
 import { boundsOf, focusRing, type Bounds } from '../../domain/layout';
@@ -35,6 +35,7 @@ import { StarField, Twinkles } from './StarField';
 import { displayWidth, truncateByWidth } from '../../utils/format';
 import { pickVisibleLabels, type LabelCandidate } from './labels';
 import { MAX_LABEL_WIDTH, StarNode, type StarEmphasis } from './StarNode';
+import { displayTitle } from '../../utils/noteTitle';
 
 export interface View {
   /** Screen position (px) of the universe origin. */
@@ -868,7 +869,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         id: note.id,
         x: pos.x * k,
         top: pos.y * k + (size * 1.75 + 3) * glyphToScreen,
-        width: displayWidth(truncateByWidth(note.title, MAX_LABEL_WIDTH)) * fontPx * 0.52 + 4,
+        width: displayWidth(truncateByWidth(displayTitle(note), MAX_LABEL_WIDTH)) * fontPx * 0.52 + 4,
         height: fontPx * 1.3,
         // Pinned stars get their label before other ordinary stars.
         priority: rank[emphasis] - (note.pinned && emphasis !== 'selected' ? 0.5 : 0),
@@ -930,32 +931,32 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         }}
       >
         <defs>
+          {/* Monochrome: stars are solid ink; their "glow" is a faint halo. Groups are ink too
+              (the stored group color is kept in the data but not shown). */}
           {CATEGORY_LIST.map((c) => (
             <radialGradient key={`glow-${c.id}`} id={`glow-${c.id}`}>
-              <stop offset="0%" stopColor={c.color} stopOpacity={0.55} />
-              <stop offset="35%" stopColor={c.color} stopOpacity={0.16} />
+              <stop offset="0%" stopColor={c.color} stopOpacity={0.14} />
+              <stop offset="40%" stopColor={c.color} stopOpacity={0.04} />
               <stop offset="100%" stopColor={c.color} stopOpacity={0} />
             </radialGradient>
           ))}
           {CATEGORY_LIST.map((c) => (
-            <radialGradient key={`core-${c.id}`} id={`core-${c.id}`} cx="45%" cy="40%" r="65%">
-              <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="40%" stopColor={c.color} />
-              <stop offset="100%" stopColor={c.color} stopOpacity={0.85} />
+            <radialGradient key={`core-${c.id}`} id={`core-${c.id}`}>
+              <stop offset="0%" stopColor={c.color} />
+              <stop offset="100%" stopColor={c.color} />
             </radialGradient>
           ))}
           {galaxies.map((c) => (
             <radialGradient key={`galaxy-${c.group.id}`} id={`galaxy-${c.group.id}`}>
-              <stop offset="0%" stopColor={c.group.color} stopOpacity={0.22} />
-              <stop offset="45%" stopColor={c.group.color} stopOpacity={0.08} />
-              <stop offset="100%" stopColor={c.group.color} stopOpacity={0.01} />
+              <stop offset="0%" stopColor={INK} stopOpacity={0.06} />
+              <stop offset="60%" stopColor={INK} stopOpacity={0.02} />
+              <stop offset="100%" stopColor={INK} stopOpacity={0} />
             </radialGradient>
           ))}
           {galaxies.map((c) => (
             <radialGradient key={`galaxy-core-${c.group.id}`} id={`galaxy-core-${c.group.id}`}>
-              <stop offset="0%" stopColor="#ffffff" stopOpacity={0.9} />
-              <stop offset="40%" stopColor={c.group.color} stopOpacity={0.55} />
-              <stop offset="100%" stopColor={c.group.color} stopOpacity={0} />
+              <stop offset="0%" stopColor={INK} stopOpacity={0.22} />
+              <stop offset="100%" stopColor={INK} stopOpacity={0} />
             </radialGradient>
           ))}
         </defs>

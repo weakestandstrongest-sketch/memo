@@ -5,6 +5,7 @@ import type { Note } from '../domain/types';
 import { CloseIcon, SearchIcon } from './icons';
 import { isComposing } from '../utils/ime';
 import { CategoryIcon } from './universe/CategoryGlyph';
+import { displayTitle } from '../utils/noteTitle';
 
 interface SearchBoxProps {
   query: string;
@@ -114,7 +115,7 @@ export const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(function S
               >
                 <CategoryIcon category={n.category} size={18} />
                 <span className="search-result-text">
-                  <span className="search-result-title">{n.title}</span>
+                  <span className="search-result-title">{displayTitle(n)}</span>
                   <span className="search-result-meta">{CATEGORIES[n.category].label}</span>
                 </span>
               </button>

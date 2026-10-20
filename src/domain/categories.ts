@@ -15,15 +15,18 @@ export interface CategoryInfo {
   description: string;
 }
 
+/** Monochrome design: every category is drawn in ink; the shapes tell them apart. */
+export const INK = '#111111';
+
 /**
- * Each category has a distinct color AND a distinct shape, so categories can be
+ * Each category has a distinct shape, so categories can be
  * told apart without relying on color alone.
  */
 export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   ideas: {
     id: 'ideas',
     label: ja.categories.ideas.label,
-    color: '#ffe3a0',
+    color: INK,
     shape: 'sparkle',
     shapeName: ja.categories.ideas.shapeName,
     description: ja.categories.ideas.description,
@@ -31,7 +34,7 @@ export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   learning: {
     id: 'learning',
     label: ja.categories.learning.label,
-    color: '#a5e6ff',
+    color: INK,
     shape: 'planet',
     shapeName: ja.categories.learning.shapeName,
     description: ja.categories.learning.description,
@@ -39,7 +42,7 @@ export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   goals: {
     id: 'goals',
     label: ja.categories.goals.label,
-    color: '#ffb4d0',
+    color: INK,
     shape: 'star',
     shapeName: ja.categories.goals.shapeName,
     description: ja.categories.goals.description,
@@ -47,7 +50,7 @@ export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   journal: {
     id: 'journal',
     label: ja.categories.journal.label,
-    color: '#d4c6ff',
+    color: INK,
     shape: 'crescent',
     shapeName: ja.categories.journal.shapeName,
     description: ja.categories.journal.description,
@@ -55,14 +58,17 @@ export const CATEGORIES: Record<CategoryId, CategoryInfo> = {
   other: {
     id: 'other',
     label: ja.categories.other.label,
-    color: '#b4f2d2',
+    color: INK,
     shape: 'diamond',
     shapeName: ja.categories.other.shapeName,
     description: ja.categories.other.description,
   },
 };
 
-export const CATEGORY_LIST: CategoryInfo[] = CATEGORY_IDS.map((id) => CATEGORIES[id]);
+/** Order shown in pickers and filters: plain memo first. */
+export const CATEGORY_LIST: CategoryInfo[] = (['other', 'ideas', 'learning', 'goals', 'journal'] as const).map(
+  (id) => CATEGORIES[id],
+);
 
 export function isCategoryId(value: unknown): value is CategoryId {
   return typeof value === 'string' && (CATEGORY_IDS as readonly string[]).includes(value);

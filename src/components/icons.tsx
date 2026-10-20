@@ -157,3 +157,22 @@ export const HistoryIcon = () => (
     <path d="M12 7.5V12l3 2" />
   </Icon>
 );
+
+export const BackIcon = () => (
+  <Icon size={22}>
+    <path d="M15 5l-7 7 7 7" />
+  </Icon>
+);
+/** "メモ": lines of text on a page. */
+export const NotesIcon = () => (
+  <Icon size={22}>
+    <rect x="5" y="3.5" width="14" height="17" rx="3" />
+    <path d="M9 8.5h6M9 12h6M9 15.5h3.5" />
+  </Icon>
+);
+export const SmallPlusIcon = () => (
+  <Icon size={16}>
+    <path d="M12 6v12M6 12h12" />
+  </Icon>
+);
+

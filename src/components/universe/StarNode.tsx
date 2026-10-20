@@ -4,6 +4,7 @@ import { CATEGORIES } from '../../domain/categories';
 import type { Note } from '../../domain/types';
 import { truncateByWidth } from '../../utils/format';
 import { Glyph } from './CategoryGlyph';
+import { displayTitle } from '../../utils/noteTitle';
 
 export type StarEmphasis =
   | 'normal'
@@ -69,7 +70,7 @@ export const StarNode = memo(function StarNode({
   onKeyActivate,
 }: StarNodeProps) {
   const category = CATEGORIES[note.category];
-  const label = truncateByWidth(note.title, MAX_LABEL_WIDTH);
+  const label = truncateByWidth(displayTitle(note), MAX_LABEL_WIDTH);
 
   const onKeyDown = (e: KeyboardEvent<SVGGElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -97,7 +98,7 @@ export const StarNode = memo(function StarNode({
       data-note-id={note.id}
       role="button"
       tabIndex={0}
-      aria-label={ja.star.ariaLabel(note.title, category.label, category.shapeName)}
+      aria-label={ja.star.ariaLabel(displayTitle(note), category.label, category.shapeName)}
       aria-pressed={emphasis === 'selected'}
       onKeyDown={onKeyDown}
       style={{

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_IDS, type CategoryId, type Position, type UniverseData } from './domain/types';
 import { formatDateTime } from './utils/format';
-import { skyPhase, type SkyPhase } from './utils/sky';
+import { displayTitle } from './utils/noteTitle';
 import { GROUP_COLORS } from './domain/groups';
 import { historyRange, linkedNotes, matchesQuery, universeAt } from './domain/universe';
 import { ja } from './i18n/ja';
@@ -17,40 +17,33 @@ import { CategoryFilter } from './components/CategoryFilter';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ConnectPicker } from './components/ConnectPicker';
 import { DataMenu } from './components/DataMenu';
-import { DetailPanel } from './components/DetailPanel';
 import { GroupDialog } from './components/GroupDialog';
 import { HelpDialog } from './components/HelpDialog';
 import { HistoryBar } from './components/HistoryBar';
-import { NoteFormModal } from './components/NoteFormModal';
+import { MapHeader } from './components/MapHeader';
+import { NotePage, type NotePageVariant } from './components/NotePage';
+import { NotesView, type NotesOrder } from './components/NotesView';
 import { SearchBox } from './components/SearchBox';
 import { SettingsDialog } from './components/SettingsDialog';
-import { Sidebar } from './components/Sidebar';
+import { TabBar, type View } from './components/TabBar';
 import { Toast, type ToastMessage } from './components/Toast';
-import { TopBar } from './components/TopBar';
-import { Dock } from './components/Dock';
-import { CloseIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from './components/icons';
+import { CloseIcon, SmallPlusIcon, ZoomInIcon, ZoomOutIcon } from './components/icons';
 import { Universe, type Insets, type UniverseHandle } from './components/universe/Universe';
 
 type Dialog =
-  /** `at`: where to put the new star (long press / double-click), otherwise the screen centre. */
-  | { kind: 'create'; at?: Position }
-  | { kind: 'edit'; id: string }
   | { kind: 'connect'; id: string }
   | { kind: 'delete'; id: string }
   | { kind: 'import'; data: UniverseData }
   | { kind: 'help' }
   | { kind: 'settings' }
-  | { kind: 'group-create' }
+  /** `forNote`: the memo whose "グループ" asked for a new group (it joins the group). */
+  | { kind: 'group-create'; forNote?: string }
   | { kind: 'group-edit'; id: string }
   | { kind: 'group-delete'; id: string }
   | null;
 
-/** Width of the star list on wide screens (keep in sync with .sidebar in styles.css). */
-const SIDEBAR_WIDTH = 320;
-/** Space kept free above the bottom edge for the dock. */
-const DOCK_SPACE = 104;
-/** How long the "stars born today" note stays. */
-const TODAY_NOTE_MS = 7000;
+/** Space kept free above the bottom edge for the tab bar. */
+const TAB_BAR_SPACE = 92;
 
 const NOTICE_TEXT: Record<Exclude<StorageNotice, null>, string> = {
   repaired: ja.storageNotice.repaired,
@@ -70,30 +63,34 @@ export default function App({ onLockNow }: AppProps) {
 
   const universeRef = useRef<UniverseHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const topbarRef = useRef<HTMLElement>(null);
+  const mapHeadRef = useRef<HTMLElement>(null);
   const filterPanelRef = useRef<HTMLDivElement>(null);
-  const detailRef = useRef<HTMLElement>(null);
+  const pageRef = useRef<HTMLElement>(null);
 
   // --- Layout mode ---------------------------------------------------------
   const compact = useMediaQuery('(max-width: 719px)');
-  // Room for the category panel on the left — otherwise the categories are a row of chips under the search.
+  // Room for the kind panel on the left of the map — otherwise kinds are chips under the search.
   const roomyFilters = useMediaQuery('(min-width: 900px) and (min-height: 600px)');
   const touch = useMediaQuery('(pointer: coarse)');
 
   // --- UI state --------------------------------------------------------------
+  const [view, setView] = useState<View>('notes');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** The memo just made with ＋ (its title gets the cursor). */
+  const [freshId, setFreshId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [activeCats, setActiveCats] = useState<Set<CategoryId>>(() => new Set());
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  /** "宇宙の歴史" playback: the universe is shown as it was at `time`. */
+  const [order, setOrder] = useState<NotesOrder>(() => (readPref('notes-order') === 'groups' ? 'groups' : 'recent'));
+  /** "星図の歴史" playback: the map is shown as it was at `time`. */
   const [history, setHistory] = useState<{ start: number; end: number; time: number; playing: boolean } | null>(null);
+  const [historyRequested, setHistoryRequested] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [connectSourceId, setConnectSourceId] = useState<string | null>(null);
   const [newStarId, setNewStarId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [hintVisible, setHintVisible] = useState(() => readPref('hint-dismissed') !== '1');
   const settings = useSettings();
-  // "Now", refreshed when the app comes back to the screen and every 30 minutes (for the reminder).
+  // "Now", refreshed every minute and when the app comes back (for "3分前" and the reminder).
   const [clock, setClock] = useState(() => Date.now());
   useEffect(() => {
     const tick = () => setClock(Date.now());
@@ -101,18 +98,11 @@ export default function App({ onLockNow }: AppProps) {
       if (document.visibilityState === 'visible') tick();
     };
     document.addEventListener('visibilitychange', onVisibility);
-    const timer = window.setInterval(tick, 30 * 60 * 1000);
+    const timer = window.setInterval(tick, 60 * 1000);
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
       window.clearInterval(timer);
     };
-  }, []);
-
-  // Sky color for the time of day (checked every 5 minutes).
-  const [sky, setSky] = useState<SkyPhase>(() => skyPhase());
-  useEffect(() => {
-    const t = window.setInterval(() => setSky(skyPhase()), 5 * 60 * 1000);
-    return () => window.clearInterval(t);
   }, []);
 
   const showToast = useCallback((text: string, tone: ToastMessage['tone'] = 'info') => {
@@ -134,12 +124,24 @@ export default function App({ onLockNow }: AppProps) {
   const connectSource = connectSourceId ? notesById.get(connectSourceId) ?? null : null;
   const groupsById = useMemo(() => new Map(data.groups.map((g) => [g.id, g])), [data.groups]);
   const nextGroupColor = GROUP_COLORS[data.groups.length % GROUP_COLORS.length];
+  const titleOf = useCallback((id: string) => {
+    const note = notesById.get(id);
+    return note ? displayTitle(note) : '';
+  }, [notesById]);
 
-  // Clear selection if the selected note disappears (deleted, import…).
+  // Clear selection if the selected memo disappears (deleted, import…).
   useEffect(() => {
     if (selectedId && !notesById.has(selectedId)) setSelectedId(null);
     if (connectSourceId && !notesById.has(connectSourceId)) setConnectSourceId(null);
   }, [notesById, selectedId, connectSourceId]);
+
+  // A memo left with no title and no text (＋ pressed, then closed) is removed quietly.
+  const previousSelection = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = previousSelection.current;
+    previousSelection.current = selectedId;
+    if (previous && previous !== selectedId) actions.deleteIfBlank(previous);
+  }, [selectedId, actions]);
 
   const filterActive = query.trim().length > 0 || activeCats.size > 0;
   const matches = useMemo(
@@ -155,44 +157,97 @@ export default function App({ onLockNow }: AppProps) {
     for (const n of data.notes) c[n.category]++;
     return c;
   }, [data.notes]);
+  const linkCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of data.connections) {
+      m.set(c.sourceId, (m.get(c.sourceId) ?? 0) + 1);
+      m.set(c.targetId, (m.get(c.targetId) ?? 0) + 1);
+    }
+    return m;
+  }, [data.connections]);
   const links = useMemo(() => (selected ? linkedNotes(data, selected.id) : []), [data, selected]);
 
-  // --- Space covered by panels (so the camera centres stars in the visible area) ---
-  const detailVisible = Boolean(selected) && !connectSourceId;
-  const topBox = useElementRect(topbarRef);
-  const filterBox = useElementRect(filterPanelRef, roomyFilters);
-  const detailBox = useElementRect(detailRef, detailVisible);
+  // --- The memo page --------------------------------------------------------
+  const pageVariant: NotePageVariant = view === 'notes' ? 'page' : compact ? 'sheet' : 'side';
+  const pageVisible = Boolean(selected) && !connectSourceId && !history;
+
+  // --- Space covered by panels (so the map centres stars in the visible area) ---
+  const inMap = view === 'map';
+  const headBox = useElementRect(mapHeadRef, inMap);
+  const filterBox = useElementRect(filterPanelRef, inMap && roomyFilters);
+  const pageBox = useElementRect(pageRef, inMap && pageVisible);
   const insets: Insets = useMemo(
     () => ({
-      top: (topBox?.bottom ?? 0) + 8,
-      left: Math.max(
-        roomyFilters && filterBox ? filterBox.right + 8 : 0,
-        sidebarOpen && !compact ? SIDEBAR_WIDTH + 24 : 0,
-      ),
-      right: detailVisible && !compact && detailBox ? detailBox.width + 24 : 0,
-      bottom: detailVisible && compact && detailBox ? detailBox.height : DOCK_SPACE,
+      top: (headBox?.bottom ?? 0) + 8,
+      left: roomyFilters && filterBox ? filterBox.right + 8 : 0,
+      right: pageVisible && !compact && pageBox ? pageBox.width + 24 : 0,
+      bottom: pageVisible && compact && pageBox ? pageBox.height : TAB_BAR_SPACE,
     }),
-    [topBox, filterBox, detailBox, roomyFilters, compact, detailVisible, sidebarOpen],
+    [headBox, filterBox, pageBox, roomyFilters, compact, pageVisible],
   );
 
-  // --- Selection -------------------------------------------------------------
-  const openStar = useCallback((id: string, jump: boolean) => {
-    setSelectedId(id);
-    actions.markOpened(id);
-    // Wait a moment so the panel has been measured before moving the camera.
-    window.setTimeout(() => {
-      if (jump) universeRef.current?.focusOn(id);
-      else universeRef.current?.ensureVisible(id);
-    }, 80);
-  }, [actions]);
+  // --- Opening memos ------------------------------------------------------------
+  const openNote = useCallback(
+    (id: string, jump = false) => {
+      setSelectedId(id);
+      setFreshId(null);
+      actions.markOpened(id);
+      if (view === 'map') {
+        // Wait a moment so the panel has been measured before moving the camera.
+        window.setTimeout(() => {
+          if (jump) universeRef.current?.focusOn(id);
+          else universeRef.current?.ensureVisible(id);
+        }, 80);
+      }
+    },
+    [actions, view],
+  );
+
+  /** ＋: a new, empty memo, opened with the cursor in its title. */
+  const createMemo = useCallback(
+    (at?: Position) => {
+      let near = at;
+      if (!near && view === 'map') near = universeRef.current?.visibleCenter();
+      if (!near) {
+        // Near the memo touched last, so new thoughts gather with recent ones in the map.
+        const recent = data.notes.reduce<(typeof data.notes)[number] | null>(
+          (best, n) => (!best || n.updatedAt > best.updatedAt ? n : best),
+          null,
+        );
+        near = (recent && data.layout[recent.id]) || { x: 0, y: 0 };
+      }
+      const category = activeCats.size === 1 ? [...activeCats][0] : 'other';
+      const note = actions.createNote({ title: '', body: '', category, groupId: null }, near);
+      setHistory(null);
+      setConnectSourceId(null);
+      setSelectedId(note.id);
+      setFreshId(note.id);
+      setNewStarId(note.id);
+    },
+    [actions, activeCats, data, view],
+  );
+
+  const closePage = useCallback(() => {
+    setSelectedId(null);
+    setFreshId(null);
+  }, []);
+
+  const changeView = useCallback((next: View) => {
+    setView(next);
+    setHistory(null);
+    if (next === 'notes') setConnectSourceId(null);
+  }, []);
+
+  const showInMap = (id: string) => {
+    setView('map');
+    window.setTimeout(() => universeRef.current?.focusOn(id), 120);
+  };
 
   const tryConnect = useCallback(
     (sourceId: string, targetId: string) => {
       const result = actions.connect(sourceId, targetId);
       if (result.ok) {
-        const a = notesById.get(sourceId)?.title ?? '';
-        const b = notesById.get(targetId)?.title ?? '';
-        showToast(ja.toast.connected(a, b));
+        showToast(ja.toast.connected(titleOf(sourceId), titleOf(targetId)));
         setConnectSourceId(null);
         setDialog(null);
         setSelectedId(sourceId);
@@ -200,24 +255,24 @@ export default function App({ onLockNow }: AppProps) {
         showToast(ja.connect.errors[result.reason], 'error');
       }
     },
-    [actions, notesById, showToast],
+    [actions, showToast, titleOf],
   );
 
   const onStarTap = useCallback(
     (id: string) => {
       if (history) {
-        // While replaying history, a tap just tells when the star was born.
+        // While replaying history, a tap just tells when the memo was written.
         const note = notesById.get(id);
-        if (note) showToast(ja.history.born(note.title, formatDateTime(note.createdAt)));
+        if (note) showToast(ja.history.born(displayTitle(note), formatDateTime(note.createdAt)));
         return;
       }
       if (connectSourceId) tryConnect(connectSourceId, id);
-      else openStar(id, false);
+      else openNote(id);
     },
-    [connectSourceId, tryConnect, openStar, history, notesById, showToast],
+    [connectSourceId, tryConnect, openNote, history, notesById, showToast],
   );
 
-  const openHistory = () => {
+  const openHistory = useCallback(() => {
     const range = historyRange(data);
     if (!range || data.notes.length < 2) {
       showToast(ja.history.notEnough);
@@ -225,10 +280,25 @@ export default function App({ onLockNow }: AppProps) {
     }
     setSelectedId(null);
     setConnectSourceId(null);
-    setSidebarOpen(false);
-    universeRef.current?.fitAll(false); // frame the whole (final) universe first
+    universeRef.current?.fitAll(false); // frame the whole (final) map first
     setHistory({ ...range, time: range.start, playing: true });
+  }, [data, showToast]);
+  const requestHistory = () => {
+    if (view === 'map') openHistory();
+    else {
+      setView('map');
+      setHistoryRequested(true);
+    }
   };
+  // History asked for from the memo list: start once the map is on screen.
+  useEffect(() => {
+    if (!historyRequested || view !== 'map') return;
+    const t = window.setTimeout(() => {
+      setHistoryRequested(false);
+      openHistory();
+    }, 60);
+    return () => window.clearTimeout(t);
+  }, [historyRequested, view, openHistory]);
   const closeHistory = useCallback(() => setHistory(null), []);
   const shownData = useMemo(() => (history ? universeAt(data, history.time) : data), [data, history]);
   const historyTicks = useMemo(() => data.notes.map((n) => Date.parse(n.createdAt)).sort((a, b) => a - b), [data.notes]);
@@ -244,18 +314,11 @@ export default function App({ onLockNow }: AppProps) {
     (draggedId: string, targetId: string, from: Position) => {
       actions.moveStar(draggedId, from);
       const result = actions.connect(draggedId, targetId);
-      if (result.ok) {
-        const a = notesById.get(draggedId)?.title ?? '';
-        const b = notesById.get(targetId)?.title ?? '';
-        showToast(ja.toast.connected(a, b));
-      } else {
-        showToast(ja.connect.errors[result.reason], 'error');
-      }
+      if (result.ok) showToast(ja.toast.connected(titleOf(draggedId), titleOf(targetId)));
+      else showToast(ja.connect.errors[result.reason], 'error');
     },
-    [actions, notesById, showToast],
+    [actions, showToast, titleOf],
   );
-  const openSidebar = useCallback(() => setSidebarOpen(true), []);
-  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   const togglePin = (id: string) => {
     const note = notesById.get(id);
@@ -264,15 +327,6 @@ export default function App({ onLockNow }: AppProps) {
     showToast(note.pinned ? ja.toast.unpinned : ja.toast.pinned);
   };
 
-  /** Creates the group typed in the note form (if any) and returns the group id to use. */
-  const resolveGroupId = (values: { groupId: string | null; newGroupName?: string }) => {
-    if (!values.newGroupName) return values.groupId;
-    const group = actions.createGroup(values.newGroupName, nextGroupColor);
-    showToast(ja.toast.groupCreated(group.name));
-    return group.id;
-  };
-
-  // --- Filters -------------------------------------------------------------
   const toggleCategory = (id: CategoryId) =>
     setActiveCats((prev) => {
       const next = new Set(prev);
@@ -289,22 +343,22 @@ export default function App({ onLockNow }: AppProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
-      const typing = el.closest?.('input, textarea, [contenteditable="true"]');
+      const typing = el.closest?.('input, textarea, select, [contenteditable="true"]');
       if (dialog || typing || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === '/') {
         e.preventDefault();
         searchRef.current?.focus();
       } else if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
-        setDialog({ kind: 'create' });
+        createMemo();
       } else if (e.key === 'Escape') {
         if (connectSourceId) setConnectSourceId(null);
-        else setSelectedId(null);
+        else closePage();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dialog, connectSourceId]);
+  }, [dialog, connectSourceId, createMemo, closePage]);
 
   // Clear the "new star" highlight after its birth animation.
   useEffect(() => {
@@ -312,17 +366,6 @@ export default function App({ onLockNow }: AppProps) {
     const t = window.setTimeout(() => setNewStarId(null), 2400);
     return () => window.clearTimeout(t);
   }, [newStarId]);
-
-  // "きょう、新しい星が…": stars born today, shown for a moment after the app opens.
-  const [todayCount] = useState(() => {
-    const today = new Date().toDateString();
-    return data.notes.filter((n) => new Date(n.createdAt).toDateString() === today).length;
-  });
-  const [todayNoteOn, setTodayNoteOn] = useState(true);
-  useEffect(() => {
-    const t = window.setTimeout(() => setTodayNoteOn(false), TODAY_NOTE_MS);
-    return () => window.clearTimeout(t);
-  }, []);
 
   const dismissHint = () => {
     setHintVisible(false);
@@ -354,177 +397,240 @@ export default function App({ onLockNow }: AppProps) {
   };
 
   // --- Render ----------------------------------------------------------------
-  const editing = dialog?.kind === 'edit' ? notesById.get(dialog.id) : undefined;
   const connecting = dialog?.kind === 'connect' ? notesById.get(dialog.id) : undefined;
   const deleting = dialog?.kind === 'delete' ? notesById.get(dialog.id) : undefined;
-  const showDock = !(compact && detailVisible) && !connectSourceId && !history;
   const hasOwnNotes = data.notes.some((n) => !n.sample);
-  const showTodayNote =
-    todayNoteOn && todayCount > 0 && !hintVisible && showDock && !selected && !dialog && !sidebarOpen;
+  // The tab bar steps aside while a memo fills the phone screen.
+  const showTabBar = !(compact && pageVisible) && !connectSourceId && !history;
   const showReminder =
     isBackupDue(settings.backup, hasOwnNotes, new Date(clock)) &&
     !dialog &&
     !connectSourceId &&
-    !sidebarOpen &&
     !history &&
-    !(compact && detailVisible);
+    !(compact && pageVisible);
+
+  const menu = (
+    <DataMenu
+      onFitAll={() => {
+        setView('map');
+        window.setTimeout(() => universeRef.current?.fitAll(), 60);
+      }}
+      onShowHelp={() => setDialog({ kind: 'help' })}
+      onExport={runExport}
+      onImportFile={importFile}
+      onOpenSettings={() => setDialog({ kind: 'settings' })}
+      onOpenHistory={requestHistory}
+      onLockNow={onLockNow}
+    />
+  );
 
   return (
     <div
       className={[
         'app',
+        `view-${view}`,
         compact ? 'is-compact' : 'is-wide',
         touch && 'is-touch',
-        detailVisible && (compact ? 'has-sheet' : 'has-side-panel'),
+        pageVisible && 'has-page',
         history && 'is-history',
         !roomyFilters && 'has-chips',
       ]
         .filter(Boolean)
         .join(' ')}
     >
-      <Universe
-        ref={universeRef}
-        data={shownData}
-        historyMode={Boolean(history)}
-        selectedId={selectedId}
-        matchIds={matchIds}
-        connectSourceId={connectSourceId}
-        newStarId={newStarId}
-        insets={insets}
-        onStarTap={onStarTap}
-        onBackgroundTap={onBackgroundTap}
-        onMoveStar={actions.moveStar}
-        onMoveEnd={onMoveEnd}
-        onEdgeSwipe={openSidebar}
-        focusMode={settings.display.focusMode}
-        sky={settings.display.timeSky ? sky : null}
-        onDropConnect={onDropConnect}
-        onBackgroundLongPress={(at) => setDialog({ kind: 'create', at })}
-      />
-
-      <TopBar
-        ref={topbarRef}
-        starCount={data.notes.length}
-        linkCount={data.connections.length}
-        hour={new Date(clock).getHours()}
-        chips={
-          roomyFilters ? null : (
-            <CategoryFilter
-              variant="chips"
-              active={activeCats}
-              counts={counts}
-              onToggle={toggleCategory}
-              onClear={() => setActiveCats(new Set())}
-            />
-          )
-        }
-        search={
-          <SearchBox
-            ref={searchRef}
-            query={query}
-            onQueryChange={setQuery}
-            results={matches}
-            onOpenResult={(id) => openStar(id, true)}
+      {view === 'notes' ? (
+        <NotesView
+          ref={searchRef}
+          notes={matches}
+          totalCount={data.notes.length}
+          groups={data.groups}
+          linkCounts={linkCounts}
+          selectedId={pageVisible ? selectedId : null}
+          query={query}
+          onQueryChange={setQuery}
+          activeCats={activeCats}
+          categoryCounts={counts}
+          onToggleCategory={toggleCategory}
+          onClearCategories={() => setActiveCats(new Set())}
+          order={order}
+          onOrderChange={(o) => {
+            setOrder(o);
+            writePref('notes-order', o);
+          }}
+          onOpen={(id) => openNote(id)}
+          onCreate={() => createMemo()}
+          onShowGroupInMap={(id) => {
+            setSelectedId(null);
+            setView('map');
+            window.setTimeout(() => universeRef.current?.focusGroup(id), 120);
+          }}
+          onEditGroup={(id) => setDialog({ kind: 'group-edit', id })}
+          onCreateGroup={() => setDialog({ kind: 'group-create' })}
+          menu={menu}
+          now={clock}
+        />
+      ) : (
+        <>
+          <Universe
+            ref={universeRef}
+            data={shownData}
+            historyMode={Boolean(history)}
+            selectedId={selectedId}
+            matchIds={matchIds}
+            connectSourceId={connectSourceId}
+            newStarId={newStarId}
+            insets={insets}
+            onStarTap={onStarTap}
+            onBackgroundTap={onBackgroundTap}
+            onMoveStar={actions.moveStar}
+            onMoveEnd={onMoveEnd}
+            focusMode={settings.display.focusMode}
+            sky={null}
+            onDropConnect={onDropConnect}
+            onBackgroundLongPress={(at) => createMemo(at)}
           />
-        }
-        menu={
-          <DataMenu
+
+          <MapHeader
+            ref={mapHeadRef}
+            noteCount={data.notes.length}
+            linkCount={data.connections.length}
             onFitAll={() => universeRef.current?.fitAll()}
-            onShowHelp={() => setDialog({ kind: 'help' })}
-            onExport={runExport}
-            onImportFile={importFile}
-            onOpenSettings={() => setDialog({ kind: 'settings' })}
-            onOpenHistory={openHistory}
-            onLockNow={onLockNow}
+            search={
+              <SearchBox
+                ref={searchRef}
+                query={query}
+                onQueryChange={setQuery}
+                results={matches}
+                onOpenResult={(id) => openNote(id, true)}
+              />
+            }
+            chips={
+              roomyFilters ? null : (
+                <CategoryFilter
+                  variant="chips"
+                  active={activeCats}
+                  counts={counts}
+                  onToggle={toggleCategory}
+                  onClear={() => setActiveCats(new Set())}
+                />
+              )
+            }
           />
-        }
-      />
 
-      {roomyFilters && (
-        <div ref={filterPanelRef} className="filter-panel glass">
-          <CategoryFilter
-            variant="panel"
-            active={activeCats}
-            counts={counts}
-            onToggle={toggleCategory}
-            onClear={() => setActiveCats(new Set())}
-          />
+          {roomyFilters && (
+            <div ref={filterPanelRef} className="filter-panel">
+              <CategoryFilter
+                variant="panel"
+                active={activeCats}
+                counts={counts}
+                onToggle={toggleCategory}
+                onClear={() => setActiveCats(new Set())}
+              />
+            </div>
+          )}
+
+          {filterActive && !connectSourceId && (
+            <div className="filter-status" style={{ top: insets.top }} role="status">
+              <span>{ja.filter.status(matches.length, data.notes.length)}</span>
+              <button type="button" className="button button-small" onClick={clearFilters}>
+                {ja.common.clear}
+              </button>
+            </div>
+          )}
+
+          {connectSource && (
+            <div className="connect-banner" style={{ top: insets.top }} role="status">
+              <span>
+                {ja.connectBanner.before}
+                <strong>{displayTitle(connectSource)}</strong>
+                {ja.connectBanner.after}
+              </span>
+              <button type="button" className="button button-small" onClick={() => setConnectSourceId(null)}>
+                {ja.common.cancel}
+              </button>
+            </div>
+          )}
+
+          {!touch && (
+            <div className="view-controls">
+              <button type="button" className="icon-button round-icon" aria-label={ja.view.zoomIn} title={ja.view.zoomIn} onClick={() => universeRef.current?.zoomBy(1.3)}>
+                <ZoomInIcon />
+              </button>
+              <button type="button" className="icon-button round-icon" aria-label={ja.view.zoomOut} title={ja.view.zoomOut} onClick={() => universeRef.current?.zoomBy(1 / 1.3)}>
+                <ZoomOutIcon />
+              </button>
+            </div>
+          )}
+
+          {history && (
+            <HistoryBar
+              start={history.start}
+              end={history.end}
+              time={history.time}
+              playing={history.playing}
+              ticks={historyTicks}
+              visibleCount={shownData.notes.length}
+              onTimeChange={(time) => setHistory((h) => (h ? { ...h, time } : h))}
+              onPlayingChange={(playing) => setHistory((h) => (h ? { ...h, playing } : h))}
+              onClose={closeHistory}
+            />
+          )}
+
+          {hintVisible && !showReminder && !history && !selected && !connectSourceId && data.notes.length > 0 && (
+            <div className="hint">
+              <span>{touch ? ja.hint.touch : ja.hint.mouse}</span>
+              <button type="button" className="icon-button" aria-label={ja.hint.dismiss} onClick={dismissHint}>
+                <CloseIcon />
+              </button>
+            </div>
+          )}
+
+          {data.notes.length === 0 && (
+            <div className="empty-map">
+              <p>{ja.notes.empty}</p>
+              <button type="button" className="button button-primary" onClick={() => createMemo()}>
+                <SmallPlusIcon />
+                {ja.notes.emptyAction}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {view === 'notes' && !pageVisible && !compact && data.notes.length > 0 && (
+        <div className="page-placeholder" aria-hidden="true">
+          <p>{ja.notes.pickHint}</p>
         </div>
       )}
 
-      {filterActive && !connectSourceId && (
-        <div className="filter-status glass" style={{ top: insets.top }} role="status">
-          <span>
-            {ja.filter.status(matches.length, data.notes.length)}
-          </span>
-          <button type="button" className="button button-small" onClick={clearFilters}>
-            {ja.common.clear}
-          </button>
-        </div>
-      )}
-
-      {connectSource && (
-        <div className="connect-banner glass" style={{ top: insets.top }} role="status">
-          <span>
-            {ja.connectBanner.before}
-            <strong>{connectSource.title}</strong>
-            {ja.connectBanner.after}
-          </span>
-          <button type="button" className="button button-small" onClick={() => setConnectSourceId(null)}>
-            {ja.common.cancel}
-          </button>
-        </div>
-      )}
-
-      {selected && detailVisible && (
-        <DetailPanel
+      {selected && pageVisible && (
+        <NotePage
           key={selected.id}
-          ref={detailRef}
+          ref={pageRef}
           note={selected}
           links={links}
-          group={selected.groupId ? groupsById.get(selected.groupId) ?? null : null}
-          sheet={compact}
-          onTogglePin={() => togglePin(selected.id)}
-          onSaveBody={(body) => actions.updateNote(selected.id, { body })}
-          onClose={() => setSelectedId(null)}
-          onEdit={() => setDialog({ kind: 'edit', id: selected.id })}
+          groups={data.groups}
+          variant={pageVariant}
+          autoFocusTitle={freshId === selected.id}
+          onClose={closePage}
+          onUpdate={(patch) => {
+            actions.updateNote(selected.id, patch);
+            // Joining a group moves the star into its circle: keep it in view.
+            if (patch.groupId !== undefined && view === 'map') {
+              window.setTimeout(() => universeRef.current?.ensureVisible(selected.id), 80);
+            }
+          }}
+          onNewGroup={() => setDialog({ kind: 'group-create', forNote: selected.id })}
           onDelete={() => setDialog({ kind: 'delete', id: selected.id })}
           onConnect={() => setDialog({ kind: 'connect', id: selected.id })}
           onDisconnect={(connectionId) => {
             actions.disconnect(connectionId);
             showToast(ja.toast.linkRemoved);
           }}
-          onOpenNote={(id) => openStar(id, true)}
+          onOpenNote={(id) => openNote(id, true)}
+          onTogglePin={() => togglePin(selected.id)}
+          onShowInMap={view === 'notes' ? () => showInMap(selected.id) : undefined}
         />
-      )}
-
-      {!touch && (
-        <div className="view-controls">
-          <button type="button" className="icon-button glass" aria-label={ja.view.zoomIn} title={ja.view.zoomIn} onClick={() => universeRef.current?.zoomBy(1.3)}>
-            <ZoomInIcon />
-          </button>
-          <button type="button" className="icon-button glass" aria-label={ja.view.zoomOut} title={ja.view.zoomOut} onClick={() => universeRef.current?.zoomBy(1 / 1.3)}>
-            <ZoomOutIcon />
-          </button>
-        </div>
-      )}
-
-      {showDock && (
-        <Dock
-          sidebarOpen={sidebarOpen}
-          onFitAll={() => universeRef.current?.fitAll()}
-          onToggleSidebar={() => (sidebarOpen ? closeSidebar() : openSidebar())}
-          onCreate={() => setDialog({ kind: 'create' })}
-          onOpenHistory={openHistory}
-          onOpenSettings={() => setDialog({ kind: 'settings' })}
-        />
-      )}
-
-      {showTodayNote && (
-        <p className="today-note" role="status">
-          <span className="today-dot" aria-hidden="true" />
-          {ja.today(todayCount)}
-        </p>
       )}
 
       {showReminder && (
@@ -541,103 +647,19 @@ export default function App({ onLockNow }: AppProps) {
         />
       )}
 
-      {history && (
-        <HistoryBar
-          start={history.start}
-          end={history.end}
-          time={history.time}
-          playing={history.playing}
-          ticks={historyTicks}
-          visibleCount={shownData.notes.length}
-          onTimeChange={(time) => setHistory((h) => (h ? { ...h, time } : h))}
-          onPlayingChange={(playing) => setHistory((h) => (h ? { ...h, playing } : h))}
-          onClose={closeHistory}
-        />
-      )}
-
-      {hintVisible && !showReminder && !history && !selected && !connectSourceId && (
-        <div className="hint glass">
-          <span>
-            {touch ? ja.hint.touch : ja.hint.mouse}
-          </span>
-          <button type="button" className="icon-button" aria-label={ja.hint.dismiss} onClick={dismissHint}>
-            <CloseIcon />
-          </button>
-        </div>
-      )}
-
-      {data.notes.length === 0 && (
-        <div className="empty-universe">
-          <p className="empty-universe-title">{ja.empty.title}</p>
-          <button type="button" className="button button-primary" onClick={() => setDialog({ kind: 'create' })}>
-            <PlusIcon /> {ja.empty.button}
-          </button>
-        </div>
-      )}
-
-      {sidebarOpen && (
-        <Sidebar
-          notes={data.notes}
-          groups={data.groups}
-          selectedId={selectedId}
-          overlay={compact}
-          onClose={closeSidebar}
-          onOpenNote={(id) => {
-            if (compact) closeSidebar();
-            openStar(id, true);
-          }}
-          onTogglePin={togglePin}
-          onFocusGroup={(id) => {
-            if (compact) closeSidebar();
-            setSelectedId(null);
-            window.setTimeout(() => universeRef.current?.focusGroup(id), 80);
-          }}
-          onEditGroup={(id) => setDialog({ kind: 'group-edit', id })}
-          onCreateGroup={() => setDialog({ kind: 'group-create' })}
+      {showTabBar && (
+        <TabBar
+          view={view}
+          onViewChange={changeView}
+          onCreate={() => createMemo()}
+          onOpenHistory={requestHistory}
+          onOpenSettings={() => setDialog({ kind: 'settings' })}
         />
       )}
 
       <Toast toast={toast} onDone={clearToast} />
 
       {/* --- Dialogs ------------------------------------------------------ */}
-      {dialog?.kind === 'create' && (
-        <NoteFormModal
-          defaultCategory={activeCats.size === 1 ? [...activeCats][0] : null}
-          groups={data.groups}
-          onClose={() => setDialog(null)}
-          onSubmit={(values) => {
-            const near = dialog.at ?? universeRef.current?.visibleCenter() ?? { x: 0, y: 0 };
-            const groupId = resolveGroupId(values);
-            const note = actions.createNote({ ...values, groupId }, near);
-            setDialog(null);
-            setNewStarId(note.id);
-            openStar(note.id, false);
-            showToast(ja.toast.created);
-          }}
-        />
-      )}
-
-      {editing && (
-        <NoteFormModal
-          note={editing}
-          groups={data.groups}
-          onClose={() => setDialog(null)}
-          onSubmit={(values) => {
-            const groupId = resolveGroupId(values);
-            actions.updateNote(editing.id, {
-              title: values.title,
-              body: values.body,
-              category: values.category,
-              groupId,
-            });
-            // The star may have moved into its new galaxy: keep it in view.
-            window.setTimeout(() => universeRef.current?.ensureVisible(editing.id), 80);
-            setDialog(null);
-            showToast(ja.toast.saved);
-          }}
-        />
-      )}
-
       {connecting && (
         <ConnectPicker
           source={connecting}
@@ -647,6 +669,7 @@ export default function App({ onLockNow }: AppProps) {
           onPickInUniverse={() => {
             setDialog(null);
             setConnectSourceId(connecting.id);
+            setView('map');
           }}
         />
       )}
@@ -654,7 +677,7 @@ export default function App({ onLockNow }: AppProps) {
       {deleting && (
         <ConfirmDialog
           title={ja.deleteDialog.title}
-          message={<p>{ja.deleteDialog.message(deleting.title, linkedNotes(data, deleting.id).length)}</p>}
+          message={<p>{ja.deleteDialog.message(displayTitle(deleting), linkedNotes(data, deleting.id).length)}</p>}
           confirmLabel={ja.deleteDialog.confirm}
           danger
           onCancel={() => setDialog(null)}
@@ -699,7 +722,8 @@ export default function App({ onLockNow }: AppProps) {
           suggestedColor={nextGroupColor}
           onClose={() => setDialog(null)}
           onSubmit={({ name, color }) => {
-            actions.createGroup(name, color);
+            const group = actions.createGroup(name, color);
+            if (dialog.forNote) actions.updateNote(dialog.forNote, { groupId: group.id });
             setDialog(null);
             showToast(ja.toast.groupCreated(name));
           }}

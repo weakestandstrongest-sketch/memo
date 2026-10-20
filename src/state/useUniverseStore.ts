@@ -23,11 +23,14 @@ import {
 } from '../domain/universe';
 import { createLocalStorageAdapter } from '../storage/localStorageAdapter';
 import type { UniverseStorage } from '../storage/types';
+import { isBlankNote } from '../utils/noteTitle';
+import { flushPendingEdits } from './pendingEdits';
 
 type Action =
   | { type: 'add'; note: Note; near: Position }
   | { type: 'update'; id: string; patch: Partial<NewNoteInput> }
   | { type: 'delete'; id: string }
+  | { type: 'delete-if-blank'; id: string }
   | { type: 'connect'; a: string; b: string }
   | { type: 'disconnect'; connectionId: string }
   | { type: 'move'; id: string; position: Position }
@@ -47,6 +50,11 @@ function reducer(state: UniverseData, action: Action): UniverseData {
       return updateNote(state, action.id, action.patch);
     case 'delete':
       return deleteNote(state, action.id);
+    case 'delete-if-blank': {
+      // Checked here (not by the caller) so text saved just before still counts.
+      const note = state.notes.find((n) => n.id === action.id);
+      return note && isBlankNote(note) ? deleteNote(state, action.id) : state;
+    }
     case 'connect':
       return connectNotes(state, action.a, action.b);
     case 'disconnect':
@@ -102,6 +110,7 @@ export function useUniverseStore(storage: UniverseStorage = defaultStorage) {
   // --- Auto-save (debounced) ---------------------------------------------
   const dirty = useRef(false);
   const flush = useCallback(() => {
+    flushPendingEdits(); // text typed a moment ago, not yet handed over
     if (!dirty.current) return;
     dirty.current = false;
     if (!storage.save(dataRef.current)) setNotice('save-failed');
@@ -130,57 +139,70 @@ export function useUniverseStore(storage: UniverseStorage = defaultStorage) {
     };
   }, [flush]);
 
+  // Applies an action to the always-current copy right away (and to React state as usual),
+  // so a save that happens before the next render — locking, the app going to the
+  // background — already includes it.
+  const apply = useCallback((action: Action) => {
+    dataRef.current = reducer(dataRef.current, action);
+    dirty.current = true;
+    dispatch(action);
+  }, []);
+
   // --- Actions -------------------------------------------------------------
   const actions = useMemo(
     () => ({
       /** Creates a note and its star near `near`. Returns the new note. */
       createNote(input: NewNoteInput, near: Position): Note {
         const note = buildNote(input);
-        dispatch({ type: 'add', note, near });
+        apply({ type: 'add', note, near });
         return note;
       },
       updateNote(id: string, patch: Partial<NewNoteInput>) {
-        dispatch({ type: 'update', id, patch });
+        apply({ type: 'update', id, patch });
       },
       deleteNote(id: string) {
-        dispatch({ type: 'delete', id });
+        apply({ type: 'delete', id });
+      },
+      /** Removes a memo that was left with no title and no text (e.g. ＋ pressed by mistake). */
+      deleteIfBlank(id: string) {
+        apply({ type: 'delete-if-blank', id });
       },
       /** Connects two stars. Returns why it failed, if it did. */
       connect(a: string, b: string): ConnectCheck {
         const check = checkConnection(dataRef.current, a, b);
-        if (check.ok) dispatch({ type: 'connect', a, b });
+        if (check.ok) apply({ type: 'connect', a, b });
         return check;
       },
       disconnect(connectionId: string) {
-        dispatch({ type: 'disconnect', connectionId });
+        apply({ type: 'disconnect', connectionId });
       },
       moveStar(id: string, position: Position) {
-        dispatch({ type: 'move', id, position });
+        apply({ type: 'move', id, position });
       },
       settleStar(id: string) {
-        dispatch({ type: 'settle', id });
+        apply({ type: 'settle', id });
       },
       replaceAll(next: UniverseData) {
-        dispatch({ type: 'replace', data: next });
+        apply({ type: 'replace', data: next });
       },
       /** Creates a group (galaxy). Returns it so the caller can use its id. */
       createGroup(name: string, color: string): Group {
         const group = buildGroup(name, color);
-        dispatch({ type: 'add-group', group });
+        apply({ type: 'add-group', group });
         return group;
       },
       updateGroup(id: string, patch: { name?: string; color?: string }) {
-        dispatch({ type: 'update-group', id, patch });
+        apply({ type: 'update-group', id, patch });
       },
       deleteGroup(id: string) {
-        dispatch({ type: 'delete-group', id });
+        apply({ type: 'delete-group', id });
       },
       setPinned(id: string, pinned: boolean) {
-        dispatch({ type: 'pin', id, pinned });
+        apply({ type: 'pin', id, pinned });
       },
       /** Records that a star was opened (makes it shine brighter for a while). */
       markOpened(id: string) {
-        dispatch({ type: 'opened', id });
+        apply({ type: 'opened', id });
       },
     }),
     [],

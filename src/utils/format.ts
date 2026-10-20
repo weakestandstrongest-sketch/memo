@@ -52,3 +52,39 @@ export function displayWidth(text: string): number {
   for (const ch of text) width += isWide(ch) ? 2 : 1;
   return width;
 }
+
+/** "10月20日 火曜日" — today's date for the top of the memo list. */
+export function formatLongDate(date: Date): string {
+  try {
+    return new Intl.DateTimeFormat('ja-JP', { month: 'long', day: 'numeric', weekday: 'long' }).format(date);
+  } catch {
+    return date.toLocaleDateString('ja-JP');
+  }
+}
+
+/** "たった今" / "5分前" / "3時間前" / "昨日" / "10月18日" / "2025年3月2日" — for memo lists. */
+export function formatRelative(iso: string, now = new Date()): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const minutes = Math.floor((now.getTime() - date.getTime()) / 60_000);
+  if (minutes < 1) return 'たった今';
+  if (minutes < 60) return `${minutes}分前`;
+  const bucket = dateBucket(iso, now);
+  if (bucket === 'today') return `${Math.floor(minutes / 60)}時間前`;
+  if (bucket === 'yesterday') return '昨日';
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return sameYear ? `${date.getMonth() + 1}月${date.getDate()}日` : `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+export type DateBucket = 'today' | 'yesterday' | 'week' | 'earlier';
+
+/** Which heading a memo goes under in the list (by local calendar day). */
+export function dateBucket(iso: string, now = new Date()): DateBucket {
+  const date = new Date(iso);
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return 'week';
+  return 'earlier';
+}

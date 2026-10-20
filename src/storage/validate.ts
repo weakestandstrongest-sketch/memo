@@ -56,7 +56,8 @@ export function sanitizeUniverse(raw: unknown, now = new Date()): SanitizeResult
   const notes: Note[] = [];
   const seenIds = new Set<string>();
   for (const item of raw.notes) {
-    if (!isObject(item) || !isNonEmptyString(item.id) || !isNonEmptyString(item.title)) {
+    // An empty title is fine: quick memos can be untitled (shown as their first line).
+    if (!isObject(item) || !isNonEmptyString(item.id) || typeof item.title !== 'string') {
       repairs++;
       continue;
     }
@@ -70,6 +71,11 @@ export function sanitizeUniverse(raw: unknown, now = new Date()): SanitizeResult
     const updatedAt = isValidDate(item.updatedAt) ? item.updatedAt : createdAt;
     const category = isCategoryId(item.category) ? item.category : 'other';
     const body = typeof item.body === 'string' ? item.body : '';
+    if (!item.title.trim() && !body.trim()) {
+      // A memo with no title and no text (one opened with ＋ and left empty) is simply
+      // not kept. Not counted as a repair: nothing was damaged.
+      continue;
+    }
     if (createdAt !== item.createdAt || category !== item.category || body !== item.body) repairs++;
 
     const note: Note = {

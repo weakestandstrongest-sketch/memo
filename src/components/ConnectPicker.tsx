@@ -6,6 +6,7 @@ import { matchesQuery, neighborIds } from '../domain/universe';
 import { Modal } from './Modal';
 import { TargetIcon } from './icons';
 import { CategoryIcon } from './universe/CategoryGlyph';
+import { displayTitle } from '../utils/noteTitle';
 
 interface ConnectPickerProps {
   source: Note;
@@ -29,7 +30,7 @@ export function ConnectPicker({ source, data, onPick, onPickInUniverse, onClose 
           // Not-yet-connected stars first, then alphabetical.
           const ca = connected.has(a.id) ? 1 : 0;
           const cb = connected.has(b.id) ? 1 : 0;
-          return ca - cb || a.title.localeCompare(b.title, 'ja');
+          return ca - cb || displayTitle(a).localeCompare(displayTitle(b), 'ja');
         }),
     [data.notes, source.id, query, connected],
   );
@@ -40,7 +41,7 @@ export function ConnectPicker({ source, data, onPick, onPickInUniverse, onClose 
     <Modal title={ja.connect.title} onClose={onClose} className="connect-picker">
       <p className="picker-intro">
         {ja.connect.introBefore}
-        <strong>{source.title}</strong>
+        <strong>{displayTitle(source)}</strong>
         {ja.connect.introAfter}
       </p>
 
@@ -78,7 +79,7 @@ export function ConnectPicker({ source, data, onPick, onPickInUniverse, onClose 
                   >
                     <CategoryIcon category={n.category} size={20} />
                     <span className="picker-item-text">
-                      <span className="picker-item-title">{n.title}</span>
+                      <span className="picker-item-title">{displayTitle(n)}</span>
                       <span className="picker-item-meta">{CATEGORIES[n.category].label}</span>
                     </span>
                     {isConnected && <span className="badge">{ja.connect.alreadyConnected}</span>}

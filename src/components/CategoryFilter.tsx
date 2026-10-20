@@ -25,7 +25,7 @@ export function CategoryFilter({ active, counts, onToggle, onClear, variant }: C
         onClick={onClear}
       >
         {variant === 'panel' && <span className="filter-all-dot" aria-hidden="true" />}
-        <span className="filter-label">{variant === 'chips' ? ja.filter.allShort : ja.filter.all}</span>
+        <span className="filter-label">{ja.filter.all}</span>
       </button>
       {CATEGORY_LIST.map((c) => {
         const on = active.has(c.id);

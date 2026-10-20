@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { INK } from '../../domain/categories';
 import type { Position } from '../../domain/types';
 
 interface ShootingStarProps {
@@ -57,15 +58,15 @@ export function ShootingStar({ getFrom, getTo, zoom, onDone }: ShootingStarProps
     <g className="shooting-star" aria-hidden="true">
       <defs>
         <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={tx} y1={ty} x2={hx} y2={hy}>
-          <stop offset="0%" stopColor="#fff" stopOpacity={0} />
-          <stop offset="100%" stopColor="#fff" stopOpacity={0.95} />
+          <stop offset="0%" stopColor={INK} stopOpacity={0} />
+          <stop offset="100%" stopColor={INK} stopOpacity={0.95} />
         </linearGradient>
       </defs>
       {travel < 1 && (
         <>
           <line x1={tx} y1={ty} x2={hx} y2={hy} stroke={`url(#${gradientId})`} strokeWidth={2.4 * px} strokeLinecap="round" />
-          <circle cx={hx} cy={hy} r={7 * px} fill="#fff" opacity={0.25} />
-          <circle cx={hx} cy={hy} r={2.6 * px} fill="#fff" />
+          <circle cx={hx} cy={hy} r={7 * px} fill={INK} opacity={0.25} />
+          <circle cx={hx} cy={hy} r={2.6 * px} fill={INK} />
         </>
       )}
       {flash > 0 && (
@@ -74,7 +75,7 @@ export function ShootingStar({ getFrom, getTo, zoom, onDone }: ShootingStarProps
           cy={b.y}
           r={(8 + flash * 34) * px}
           fill="none"
-          stroke="#fff"
+          stroke={INK}
           strokeWidth={1.5 * px}
           opacity={1 - flash}
         />

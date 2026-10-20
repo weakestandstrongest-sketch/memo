@@ -3,11 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Root } from './Root';
 import { startSplash } from './splash';
-// Self-hosted fonts (no request to Google; only the characters actually shown are downloaded)
-import '@fontsource/shippori-mincho/500.css';
-import '@fontsource/shippori-mincho/600.css';
-import '@fontsource/cormorant-garamond/latin-500.css';
-import '@fontsource/cormorant-garamond/latin-500-italic.css';
+// Self-hosted Latin type (no request to Google). Japanese uses the system's gothic
+// (Hiragino Sans on iPhone / Mac, Yu Gothic UI / Meiryo on Windows).
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-500.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/inter/latin-700.css';
+import '@fontsource/inter/latin-800.css';
 import './styles.css';
 
 startSplash();

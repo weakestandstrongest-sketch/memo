@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react';
+import { INK } from '../../domain/categories';
 import type { GalaxyCircle } from '../../domain/groups';
 
 interface GalaxyArtProps {
@@ -69,7 +70,7 @@ export const GalaxyArt = memo(function GalaxyArt({ circle, dim, zoom }: GalaxyAr
   const labelPx = 12.5 / zoom; // ~12.5px on screen at any zoom
 
   return (
-    <g className={`galaxy ${dim ? 'is-dim' : ''}`} style={{ color: group.color }} transform={`translate(${cx} ${cy})`}>
+    <g className={`galaxy ${dim ? 'is-dim' : ''}`} style={{ color: INK }} transform={`translate(${cx} ${cy})`}>
       <circle r={r} fill={`url(#galaxy-${group.id})`} />
       {/* Arms + dust turn slowly together */}
       <g className="galaxy-spin">

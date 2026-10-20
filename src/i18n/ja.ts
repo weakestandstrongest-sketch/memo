@@ -3,15 +3,15 @@
  *
  * To change any wording in the app, edit it here. Code, comments and
  * identifiers stay in English; only the strings shown to the user live in this file.
- * Text the user types (note titles and bodies) is never translated.
+ * Text the user types (memo titles and bodies) is never translated.
  */
 import type { CategoryId } from '../domain/types';
 
 export const ja = {
   app: {
     name: 'Asterism',
-    tagline: 'あなたのアイデアで、あなただけの宇宙を。',
-    universeLabel: 'あなたの宇宙。ひとつひとつの星がメモです。',
+    tagline: 'メモをつないで、あなたの星図に。',
+    universeLabel: 'あなたの星図。ひとつひとつの星がメモです。',
   },
 
   categories: {
@@ -19,7 +19,7 @@ export const ja = {
     learning: { label: '学び', shapeName: '輪のある惑星', description: '学んだこと・発見したこと' },
     goals: { label: '目標', shapeName: '星', description: 'これから目指したいこと' },
     journal: { label: '日記', shapeName: '三日月', description: '出来事・気持ち・ふり返り' },
-    other: { label: 'その他', shapeName: 'ひし形', description: 'どれにも当てはまらないもの' },
+    other: { label: 'メモ', shapeName: 'ひし形', description: 'ふつうのメモ（迷ったらこれ）' },
   } satisfies Record<CategoryId, { label: string; shapeName: string; description: string }>,
 
   common: {
@@ -28,111 +28,125 @@ export const ja = {
     clear: 'クリア',
   },
 
-  topbar: {
-    /** Greeting shown above the wordmark, by time of day. */
-    greeting: (hour: number) => (hour >= 5 && hour < 11 ? 'おはようございます' : hour >= 11 && hour < 17 ? 'こんにちは' : 'こんばんは'),
-    starsUnit: '個の星',
-    links: (n: number) => `つながり ${n}`,
-    filterButton: (active: number) =>
-      active > 0 ? `カテゴリで絞り込む（${active}件選択中）` : 'カテゴリで絞り込む',
+  tabs: {
+    label: 'メインメニュー',
+    notes: 'メモ',
+    map: '星図',
+    create: '新しいメモ',
+    history: '歴史',
+    settings: '設定',
+  },
+
+  /** Home: the list of memos. */
+  notes: {
+    heading: 'メモ',
+    count: (n: number) => `${n}件`,
     moreOptions: 'メニュー',
+    quickTitle: '新しいメモ',
+    quickText: 'タップして、すぐに書きはじめる',
+    viewLabel: '並べ方',
+    viewRecent: '新しい順',
+    viewGroups: 'グループ',
+    pinned: 'ピン留め',
+    buckets: { today: '今日', yesterday: '昨日', week: '今週', earlier: 'それ以前' },
+    ungrouped: 'グループなし',
+    newGroup: '新しいグループ',
+    showGroupInMap: (name: string) => `「${name}」を星図で見る`,
+    editGroup: (name: string) => `「${name}」を編集`,
+    emptyGroup: 'まだメモがありません。メモの「グループ」から選べます。',
+    links: (n: number) => `つながり ${n}`,
+    empty: 'まだメモがありません。',
+    emptyAction: '最初のメモを書く',
+    noMatch: (q: string) => `「${q}」に一致するメモはありません。`,
+    noMatchFiltered: '条件に合うメモはありません。',
+    pickHint: 'メモを選ぶか、＋で新しく書きはじめましょう。',
+    open: (title: string) => `メモを開く：${title}`,
+  },
+
+  /** One memo, as a page (Notion-like). */
+  note: {
+    untitled: '無題',
+    ariaLabel: (title: string) => `メモ：${title}`,
+    titlePlaceholder: '無題',
+    titleLabel: 'タイトル',
+    bodyPlaceholder: 'メモを書く…',
+    bodyLabel: 'メモの本文',
+    back: 'メモ一覧に戻る',
+    close: '閉じる',
+    sheetExpand: '大きく表示',
+    sheetCollapse: '小さく表示',
+    kind: '種類',
+    group: 'グループ',
+    noGroup: 'なし',
+    newGroupOption: '＋ 新しいグループ…',
+    created: '作成',
+    updated: '更新',
+    sample: 'サンプル',
+    showInMap: '星図で見る',
+    pin: 'ピン留めする',
+    unpin: 'ピン留めを外す',
+    deleteAria: 'このメモを削除',
+    autosave: '自動で保存されます',
+    doneEditing: '完了',
+    linksHeading: 'つながり',
+    connect: 'つなぐ',
+    connectAria: 'ほかのメモとつなぐ',
+    noLinks: 'まだどのメモともつながっていません。関係のあるメモとつなげてみましょう。',
+    removeLink: (title: string) => `「${title}」とのつながりを外す`,
+    removeLinkTooltip: 'つながりを外す',
+    showLinkedMemo: (title: string) => `「${title}」の本文を表示`,
+    hideLinkedMemo: (title: string) => `「${title}」の本文を閉じる`,
+    linkedEmptyBody: '本文はありません。',
+    openLinked: 'このメモを開く',
+  },
+
+  /** The map ("星図") view. */
+  map: {
+    heading: '星図',
+    count: (notes: number, links: number) => `メモ ${notes}・つながり ${links}`,
   },
 
   search: {
-    placeholder: '宇宙を検索',
+    placeholder: 'メモを検索',
     ariaLabel: 'タイトルや本文でメモを検索',
     clear: '検索をクリア',
-    resultsLabel: '見つかった星',
-    noMatch: (q: string) => `「${q}」に一致する星はありません。`,
-    more: (n: number) => `ほか${n}件は宇宙の中で光っています`,
+    resultsLabel: '見つかったメモ',
+    noMatch: (q: string) => `「${q}」に一致するメモはありません。`,
+    more: (n: number) => `ほか${n}件`,
   },
 
   filter: {
-    heading: 'カテゴリ',
-    groupLabel: 'カテゴリで絞り込む',
-    all: 'すべての星',
-    allShort: 'すべて',
-    status: (matched: number, total: number) => `${total}個中 ${matched}個が一致`,
+    heading: '種類',
+    groupLabel: '種類で絞り込む',
+    all: 'すべて',
+    status: (matched: number, total: number) => `${total}件中 ${matched}件が一致`,
   },
 
   connectBanner: {
-    before: '星をタップすると「',
-    after: '」とつなぎます',
-  },
-
-  detail: {
-    ariaLabel: (title: string) => `星の詳細：${title}`,
-    sample: 'サンプル',
-    close: '詳細を閉じる',
-    created: (date: string) => `作成：${date}`,
-    edited: (date: string) => `編集：${date}`,
-    tapToWrite: 'タップしてメモを書く…',
-    bodyLabel: 'メモの本文',
-    autosave: '自動で保存されます',
-    doneEditing: '完了',
-    linksHeading: 'つながっている星',
-    noLinks: 'まだどの星ともつながっていません。関連するアイデアとつなげてみましょう。',
-    removeLink: (title: string) => `「${title}」とのつながりを外す`,
-    removeLinkTooltip: 'つながりを外す',
-    connect: '星をつなぐ',
-    edit: '編集',
-    delete: '削除',
-    deleteAria: 'この星を削除',
-    sheetExpand: '大きく表示',
-    sheetCollapse: '小さく表示',
-    pin: 'ピン留めする',
-    unpin: 'ピン留めを外す',
-    showLinkedMemo: (title: string) => `「${title}」のメモを表示`,
-    hideLinkedMemo: (title: string) => `「${title}」のメモを閉じる`,
-    linkedEmptyBody: '本文はありません。',
-    openStar: 'この星を開く',
-  },
-
-  form: {
-    newTitle: '新しい星をうむ',
-    editTitle: '星を編集',
-    create: '星をうむ',
-    save: '保存する',
-    titleLabel: 'タイトル',
-    titlePlaceholder: 'どんな星ですか？',
-    categoryLabel: 'カテゴリ',
-    bodyLabel: 'メモ',
-    bodyPlaceholder: '思いついたことを書きとめましょう…',
-    groupLabel: 'グループ',
-    noGroup: 'グループなし',
-    newGroupOption: '＋ 新しいグループをつくる…',
-    required: '必須',
-    optional: '任意',
-    errors: {
-      titleRequired: 'タイトルを入力してください。',
-      titleTooLong: (max: number) => `タイトルは${max}文字以内にしてください。`,
-      bodyTooLong: (max: number) => `本文が長すぎます（${max}文字まで）。`,
-      categoryRequired: 'カテゴリを選んでください。',
-    },
+    before: 'つなぐ星をタップ：「',
+    after: '」',
   },
 
   connect: {
-    title: '星をつなぐ',
+    title: 'メモをつなぐ',
     introBefore: '「',
-    introAfter: '」とつなぐ星を選んでください。',
-    needAnother: 'つなぐには、もうひとつ星をつくってください。',
-    searchPlaceholder: '星を探す…',
-    searchAria: 'つなぐ星を探す',
-    pickInUniverse: '宇宙の中で星をタップして選ぶ',
-    listLabel: 'つなげられる星',
+    introAfter: '」とつなぐメモを選んでください。',
+    needAnother: 'つなぐには、もうひとつメモを書いてください。',
+    searchPlaceholder: 'メモを探す…',
+    searchAria: 'つなぐメモを探す',
+    pickInUniverse: '星図の中でタップして選ぶ',
+    listLabel: 'つなげられるメモ',
     alreadyConnected: 'つながり済み',
-    noMatch: (q: string) => `「${q}」に一致する星はありません。`,
+    noMatch: (q: string) => `「${q}」に一致するメモはありません。`,
     errors: {
-      self: 'その星自身とはつなげません。別の星を選んでください。',
-      duplicate: 'この2つの星はすでにつながっています。',
-      missing: 'その星はもう存在しません。',
+      self: 'そのメモ自身とはつなげません。別のメモを選んでください。',
+      duplicate: 'この2つのメモはすでにつながっています。',
+      missing: 'そのメモはもう存在しません。',
     },
   },
 
   toast: {
-    created: '新しい星が生まれました ✦',
-    saved: '変更を保存しました。',
-    deleted: '星を削除しました。',
+    deleted: 'メモを削除しました。',
     connected: (a: string, b: string) => `「${a}」と「${b}」をつなぎました`,
     linkRemoved: 'つながりを外しました。',
     exported: 'バックアップファイルを書き出しました。',
@@ -150,7 +164,7 @@ export const ja = {
   },
 
   deleteDialog: {
-    title: 'この星を削除しますか？',
+    title: 'このメモを削除しますか？',
     message: (title: string, links: number) =>
       links > 0
         ? `「${title}」と、そのつながり${links}本が削除されます。この操作は取り消せません。`
@@ -161,30 +175,9 @@ export const ja = {
   importDialog: {
     title: 'バックアップを読み込みますか？',
     message: (current: number, notes: number, links: number) =>
-      `いまの宇宙（星${current}個）を、バックアップの内容（星${notes}個・つながり${links}本）で置き換えます。` +
+      `いまのメモ（${current}件）を、バックアップの内容（メモ${notes}件・つながり${links}本）で置き換えます。` +
       'いまの内容は消えるので、必要なら先に「バックアップを書き出す」で保存してください。',
     confirm: '置き換える',
-  },
-
-  sidebar: {
-    title: '星の一覧',
-    open: '星の一覧を開く',
-    close: '星の一覧を閉じる',
-    searchPlaceholder: '一覧から探す…',
-    searchAria: '星の一覧を絞り込む',
-    pinnedHeading: 'ピン留め',
-    ungroupedHeading: 'グループなし',
-    newGroup: '新しいグループ',
-    focusGroup: (name: string) => `「${name}」を宇宙で表示`,
-    editGroup: (name: string) => `「${name}」を編集`,
-    collapse: (name: string) => `「${name}」をたたむ`,
-    expand: (name: string) => `「${name}」を開く`,
-    empty: 'まだ星がありません。',
-    noMatch: (q: string) => `「${q}」に一致する星はありません。`,
-    emptyGroup: 'まだ星がありません。星の「編集」からこのグループを選べます。',
-    pin: (title: string) => `「${title}」をピン留めする`,
-    unpin: (title: string) => `「${title}」のピン留めを外す`,
-    swipeHint: '画面の左端から右へスワイプしても開けます。',
   },
 
   groupDialog: {
@@ -192,12 +185,10 @@ export const ja = {
     editTitle: 'グループを編集',
     nameLabel: 'グループ名',
     namePlaceholder: '例：研究テーマ',
-    colorLabel: '銀河の色',
-    colorNames: ['青', 'ピンク', 'ターコイズ', 'オレンジ', '紫', '緑'],
     create: '作成する',
     save: '保存する',
     delete: 'このグループを削除',
-    note: 'グループは、宇宙の中で星をまとめて囲む「銀河」として表示されます。',
+    note: 'グループのメモは、星図の中で円に囲まれてまとまります。',
     errors: {
       required: 'グループ名を入力してください。',
       tooLong: (max: number) => `グループ名は${max}文字以内にしてください。`,
@@ -208,7 +199,7 @@ export const ja = {
     title: 'グループを削除しますか？',
     message: (name: string, count: number) =>
       count > 0
-        ? `グループ「${name}」を削除します。中の星${count}個は削除されず、「グループなし」になります。`
+        ? `グループ「${name}」を削除します。中のメモ${count}件は削除されず、「グループなし」になります。`
         : `グループ「${name}」を削除します。`,
     confirm: '削除する',
   },
@@ -241,7 +232,7 @@ export const ja = {
   forgotDialog: {
     title: 'パスコードを忘れたとき',
     text:
-      'パスコードはどこにも送信していないため、再発行できません。ロックを解除するには、この端末のこのブラウザに保存された Asterism のデータ（星・グループ・設定）をすべて消す必要があります。',
+      'パスコードはどこにも送信していないため、再発行できません。ロックを解除するには、この端末のこのブラウザに保存された Asterism のデータ（メモ・グループ・設定）をすべて消す必要があります。',
     backupText: 'バックアップファイルがあれば、初期化したあとに「バックアップを読み込む」で元に戻せます。',
     typeLabel: '確認のため「削除」と入力してください',
     confirmWord: '削除',
@@ -281,9 +272,7 @@ export const ja = {
     backupNote: 'アプリを開いたときに、画面の中にお知らせを表示します（スマホのプッシュ通知ではありません）。',
     displayHeading: '表示',
     focusMode: 'フォーカスモード',
-    focusModeText: '星を選ぶと、つながっている星がそのまわりに集まります（表示だけで、位置は保存されません）。',
-    timeSky: '時間帯で空の色を変える',
-    timeSkyText: '夜明け・昼・夕方・夜で、宇宙の色が少しずつ変わります。',
+    focusModeText: '星図でメモを選ぶと、つながっているメモがそのまわりに集まります（表示だけで、位置は保存されません）。',
     splash: '開いたときのアニメーション',
     splashText: 'アプリを開くと、星が生まれて「Asterism」の文字が浮かびます。画面をタップすると飛ばせます。',
     deviceNote: 'これらの設定は、この端末のこのブラウザにだけ保存されます（PC と iPhone で別々です）。',
@@ -300,15 +289,15 @@ export const ja = {
   },
 
   history: {
-    open: '宇宙の歴史',
-    label: '宇宙の歴史',
+    open: '星図の歴史',
+    label: '星図の歴史',
     play: '再生',
     pause: '一時停止',
-    close: '宇宙の歴史を閉じる',
+    close: '星図の歴史を閉じる',
     slider: '表示する日時',
-    stars: (n: number) => `星 ${n}個`,
-    born: (title: string, date: string) => `「${title}」は ${date} に生まれました`,
-    notEnough: '星が2つ以上になると、宇宙の歴史を再生できます。',
+    stars: (n: number) => `メモ ${n}件`,
+    born: (title: string, date: string) => `「${title}」は ${date} に書かれました`,
+    notEnough: 'メモが2つ以上になると、星図の歴史を再生できます。',
   },
 
   hint: {
@@ -320,62 +309,44 @@ export const ja = {
   view: {
     zoomIn: '拡大',
     zoomOut: '縮小',
-    fitAll: '宇宙全体を表示',
-  },
-
-  fab: '星をつくる',
-
-  dock: {
-    label: 'メインメニュー',
-    universe: '宇宙全体を表示',
-    list: '星の一覧',
-    settings: '設定',
-  },
-
-  /** Small note above the dock when stars were born today. */
-  today: (n: number) => `きょう、新しい星が${n < 10 ? `${n}つ` : `${n}個`}生まれました`,
-
-  empty: {
-    title: 'あなたの宇宙は、最初の星を待っています。',
-    button: '最初の星をつくる',
+    fitAll: '星図全体を表示',
   },
 
   menu: {
-    fitAll: '宇宙全体を表示',
+    fitAll: '星図全体を表示',
     help: '使い方',
     export: 'バックアップを書き出す（.json）',
     import: 'バックアップを読み込む…',
     note: 'データはこの端末のこのブラウザにだけ保存されています。',
     settings: '設定',
     lockNow: '今すぐロック',
-    history: '宇宙の歴史を再生',
+    history: '星図の歴史を再生',
   },
 
   help: {
     title: '使い方',
     ok: 'わかった',
     touch: [
-      ['星をタップ', 'メモを開く'],
-      ['星を長押ししてドラッグ', '星を動かす'],
-      ['1本指でドラッグ', '宇宙を移動'],
-      ['2本指でピンチ', '拡大・縮小'],
-      ['左端から右へスワイプ', '星の一覧（ピン留め・グループ）'],
-      ['星を長押しして、別の星に重ねる', '2つの星をつなぐ'],
-      ['何もない所を長押し', 'その場所に星をつくる'],
-      ['左下の 🕘 ボタン', '宇宙の歴史を再生'],
+      ['下の黒い ＋ ボタン', '新しいメモを書く'],
+      ['メモの本文をタップ', 'そのまま書く（自動で保存）'],
+      ['メモの「つなぐ」', 'ほかのメモとつなぐ'],
+      ['下の「星図」', 'メモのつながりを星図で見る'],
+      ['星図で星をタップ', 'メモを開く'],
+      ['星を長押しして、別の星に重ねる', '2つのメモをつなぐ'],
+      ['星図の何もない所を長押し', 'その場所にメモをつくる'],
+      ['1本指でドラッグ・2本指でピンチ', '星図を移動・拡大縮小'],
     ],
     mouse: [
-      ['星をクリック', 'メモを開く'],
-      ['星をドラッグ', '星を動かす'],
-      ['何もない所をドラッグ', '宇宙を移動'],
-      ['マウスホイール', '拡大・縮小'],
-      ['「/」キー・「N」キー', '検索・新しい星'],
-      ['左上の ☰ ボタン', '星の一覧（ピン留め・グループ）'],
-      ['星をドラッグして、別の星に重ねる', '2つの星をつなぐ'],
-      ['何もない所をダブルクリック', 'その場所に星をつくる'],
-      ['左下の 🕘 ボタン', '宇宙の歴史を再生'],
+      ['下の黒い ＋ ボタン・「N」キー', '新しいメモを書く'],
+      ['メモの本文をクリック', 'そのまま書く（自動で保存）'],
+      ['「/」キー', '検索'],
+      ['メモの「つなぐ」', 'ほかのメモとつなぐ'],
+      ['星図で星をクリック', 'メモを開く'],
+      ['星をドラッグして、別の星に重ねる', '2つのメモをつなぐ'],
+      ['星図の何もない所をダブルクリック', 'その場所にメモをつくる'],
+      ['ドラッグ・マウスホイール', '星図を移動・拡大縮小'],
     ],
-    shapesHeading: '星の形',
+    shapesHeading: '種類と星の形',
     dataHeading: 'データの保存について',
     dataText:
       'メモはこの端末のこのブラウザの中にだけ保存されます。PC と iPhone のデータは自動では同期されません。' +
@@ -385,7 +356,7 @@ export const ja = {
   storageNotice: {
     repaired: '保存データの一部が壊れていたため、修復しました。',
     corrupt:
-      '保存データを読み込めませんでした。元のデータはこのブラウザ内にバックアップとして残し、サンプルの星を表示しています。',
+      '保存データを読み込めませんでした。元のデータはこのブラウザ内にバックアップとして残し、サンプルのメモを表示しています。',
     unavailable:
       'このブラウザではデータを保存できない設定になっています（プライベートブラウズなど）。ページを閉じると変更は失われます。',
     saveFailed: '最新の変更を保存できませんでした。ブラウザの保存容量がいっぱいかもしれません。',
@@ -409,7 +380,7 @@ export const ja = {
 
   crash: {
     title: '問題が発生しました。',
-    text: '星はこのブラウザに保存されたままです。ページを再読み込みすると、たいてい直ります。',
+    text: 'メモはこのブラウザに保存されたままです。ページを再読み込みすると、たいてい直ります。',
     reload: '再読み込み',
   },
 };

@@ -12,12 +12,12 @@ export function createSampleUniverse(now = new Date()): UniverseData {
       id: 'sample-welcome',
       title: 'Asterism へようこそ',
       body:
-        '書いたメモは、ひとつひとつが星になります。\n\n' +
-        '・星をタップ（クリック）すると内容を読めます。\n' +
-        '・星をドラッグすると動かせます（スマホでは長押ししてからドラッグ）。\n' +
-        '・何もない所をドラッグすると宇宙を移動、ピンチやホイールで拡大・縮小できます。\n' +
-        '・「星をつなぐ」で、関係のあるアイデア同士を線で結べます。\n\n' +
-        'サンプルの星は、自由に編集・削除してかまいません。',
+        'Asterism は、思いついたことを気軽に書きとめるメモ帳です。書いたメモは「星図」の中で星になり、関係のあるメモ同士を線でつなげられます。\n\n' +
+        '・下の黒い ＋ ボタンで、すぐに新しいメモを書けます（タイトルはあとからでも大丈夫）。\n' +
+        '・本文をタップすれば、そのまま書き足せます。書いた内容は自動で保存されます。\n' +
+        '・メモの「つなぐ」で、関係のあるメモ同士を結べます。\n' +
+        '・下の「星図」で、メモのつながりを星座のように眺められます。\n\n' +
+        'サンプルのメモは、自由に編集・削除してかまいません。',
       category: 'other',
       age: 60 * 24 * 3,
       x: 0,
@@ -80,9 +80,19 @@ export function createSampleUniverse(now = new Date()): UniverseData {
       y: 300,
     },
     {
+      // An untitled quick memo: shown by its first line.
+      id: 'sample-quick',
+      title: '',
+      body: '牛乳・卵・コーヒー豆を買う\n帰りに本屋にも寄る',
+      category: 'other',
+      age: 20,
+      x: -40,
+      y: 400,
+    },
+    {
       id: 'sample-weekly-review',
       title: 'アイデア：週に一度のふり返り',
-      body: '毎週日曜日に、その週に増えた星を見返して、関係のある星同士をつなぐ。',
+      body: '毎週日曜日に、その週に書いたメモを見返して、関係のあるメモ同士をつなぐ。',
       category: 'ideas',
       age: 45,
       x: -130,

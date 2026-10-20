@@ -53,8 +53,8 @@ export function DataMenu({
     <div className="menu" ref={wrapRef}>
       <button
         type="button"
-        className="icon-button topbar-button"
-        aria-label={ja.topbar.moreOptions}
+        className="icon-button round-icon"
+        aria-label={ja.notes.moreOptions}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}

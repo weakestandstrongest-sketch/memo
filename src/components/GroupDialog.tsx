@@ -18,10 +18,11 @@ interface GroupDialogProps {
 
 const t = ja.groupDialog;
 
-/** Create or edit a group ("galaxy"): its name and color. */
+/** Create or edit a group (shown as a circle around its memos in the map). */
 export function GroupDialog({ group, suggestedColor, onSubmit, onDelete, onClose }: GroupDialogProps) {
   const [name, setName] = useState(group?.name ?? '');
-  const [color, setColor] = useState<string>(group?.color ?? suggestedColor ?? GROUP_COLORS[0]);
+  // The design is monochrome, so there is no color to pick; a color is still stored for the data format.
+  const color = group?.color ?? suggestedColor ?? GROUP_COLORS[0];
   const [error, setError] = useState<string | null>(null);
 
   const submit = (e?: FormEvent) => {
@@ -57,7 +58,7 @@ export function GroupDialog({ group, suggestedColor, onSubmit, onDelete, onClose
         <p className="group-dialog-note">{t.note}</p>
         <div className="field">
           <label htmlFor="group-name" className="field-label">
-            {t.nameLabel} <span className="required">{ja.form.required}</span>
+            {t.nameLabel}
           </label>
           <input
             id="group-name"
@@ -83,25 +84,6 @@ export function GroupDialog({ group, suggestedColor, onSubmit, onDelete, onClose
             </p>
           )}
         </div>
-
-        <fieldset className="field">
-          <legend className="field-label">{t.colorLabel}</legend>
-          <div className="color-picker" role="radiogroup" aria-label={t.colorLabel}>
-            {GROUP_COLORS.map((c, i) => (
-              <label key={c} className={`color-swatch ${color === c ? 'is-checked' : ''}`} style={{ ['--swatch' as string]: c }}>
-                <input
-                  type="radio"
-                  name="group-color"
-                  value={c}
-                  checked={color === c}
-                  onChange={() => setColor(c)}
-                  aria-label={t.colorNames[i] ?? c}
-                />
-                <span aria-hidden="true" />
-              </label>
-            ))}
-          </div>
-        </fieldset>
 
         {group && onDelete && (
           <button type="button" className="button button-ghost button-danger-text group-delete" onClick={onDelete}>

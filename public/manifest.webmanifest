@@ -1,13 +1,13 @@
 {
   "name": "Asterism",
   "short_name": "Asterism",
-  "description": "メモやアイデアを星として宇宙に浮かべる、あなただけのノートアプリ。",
+  "description": "気軽に書けて、メモ同士をつなげられるノートアプリ。",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#040406",
-  "theme_color": "#040406",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
