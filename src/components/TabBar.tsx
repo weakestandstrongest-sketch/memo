@@ -5,6 +5,8 @@ export type View = 'notes' | 'map';
 
 interface TabBarProps {
   view: View;
+  /** Dark glass, for when the black menu is behind the bar. */
+  dark?: boolean;
   onViewChange: (view: View) => void;
   onCreate: () => void;
   onOpenHistory: () => void;
@@ -15,10 +17,10 @@ interface TabBarProps {
  * The floating bar at the bottom, iOS style: a frosted-glass pill with
  * メモ · 星図 · 歴史 · 設定, and a round ＋ on its own at the right.
  */
-export function TabBar({ view, onViewChange, onCreate, onOpenHistory, onOpenSettings }: TabBarProps) {
+export function TabBar({ view, dark = false, onViewChange, onCreate, onOpenHistory, onOpenSettings }: TabBarProps) {
   const t = ja.tabs;
   return (
-    <div className="tabbar">
+    <div className={`tabbar ${dark ? 'is-dark' : ''}`}>
       <nav className="tabbar-pill" aria-label={t.label}>
         <button
           type="button"

@@ -258,15 +258,21 @@ p {
   box-shadow: var(--shadow-sm);
 }
 
-/* ---------- Home: the picture, then (swipe up) the list ---------- */
+/* ---------- Home: the picture, then (swipe up) the black menu ---------- */
 .notes-view {
   position: fixed;
+  inset: 0;
+  overflow: hidden;
+  animation: view-in 0.35s var(--ease);
+}
+
+.notes-scroll {
+  position: absolute;
   inset: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  scroll-snap-type: y proximity;
-  animation: view-in 0.35s var(--ease);
+  scroll-snap-type: y mandatory;
 }
 
 /* First screen, like a bank app's wallet: a big title, a picture and a few numbers */
@@ -463,13 +469,101 @@ p {
   animation: reveal-nudge 2.2s ease-in-out 1s infinite;
 }
 
-/* After swiping up: search and the memos */
-.notes-list-section {
+/* After swiping up: a black menu, like a bank app's "Action" screen */
+.notes-actions {
+  display: flex;
   min-height: 100%;
-  padding: calc(var(--safe-top) + 16px) calc(var(--safe-right) + 20px) calc(var(--tabbar-height) + 32px)
-    calc(var(--safe-left) + 20px);
-  border-top: 1px solid var(--line);
+  padding: calc(var(--safe-top) + 16px) calc(var(--safe-right) + 24px) calc(var(--tabbar-height) + 8px)
+    calc(var(--safe-left) + 24px);
+  background: #000;
+  color: #fff;
   scroll-snap-align: start;
+}
+
+.actions-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.actions-title {
+  margin: max(48px, 12vh) 0 0;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.actions-list {
+  list-style: none;
+  margin: 32px 0 0;
+  padding: 0;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  width: 100%;
+  min-height: 64px;
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  font-size: 17px;
+  font-weight: 700;
+  transition: opacity 0.15s ease;
+}
+
+.action-item svg {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+.action-item:active {
+  opacity: 0.55;
+}
+
+.actions-close {
+  align-self: center;
+  margin-top: auto;
+  min-height: 48px;
+  padding: 0 28px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* The list of memos: its own screen, opened from the menu */
+.notes-list-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(var(--safe-top) + 8px) calc(var(--safe-right) + 20px) calc(var(--tabbar-height) + 32px)
+    calc(var(--safe-left) + 20px);
+  background: var(--bg);
+  animation: page-in 0.32s var(--ease);
+}
+
+.notes-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.notes-back {
+  margin-left: -10px;
 }
 
 .notes-inner {
@@ -1311,6 +1405,34 @@ p {
 
 .tab-create:active {
   transform: scale(0.9);
+}
+
+/* Dark glass over the black menu */
+.tabbar-pill,
+.tab-create {
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease, transform 0.3s var(--ease-out-back);
+}
+
+.tabbar.is-dark .tabbar-pill {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(40, 40, 40, 0.62);
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.06), 0 10px 30px -10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.tabbar.is-dark .tab {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.tabbar.is-dark .tab.is-active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.tabbar.is-dark .tab-create {
+  border-color: transparent;
+  background: #fff;
+  color: var(--ink);
 }
 
 /* ---------- Map ---------- */
@@ -2922,7 +3044,7 @@ p {
 /* Phones (portrait) and narrow windows */
 @media (max-width: 719px) {
   .notes-hero,
-  .notes-list-section {
+  .notes-list-screen {
     padding-left: calc(var(--safe-left) + 16px);
     padding-right: calc(var(--safe-right) + 16px);
   }

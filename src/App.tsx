@@ -23,7 +23,7 @@ import { HelpDialog } from './components/HelpDialog';
 import { HistoryBar } from './components/HistoryBar';
 import { MapHeader } from './components/MapHeader';
 import { NotePage, type NotePageVariant } from './components/NotePage';
-import { NotesView, type NotesOrder } from './components/NotesView';
+import { NotesView, type NotesOrder, type NotesViewHandle } from './components/NotesView';
 import { SearchBox } from './components/SearchBox';
 import { SettingsDialog } from './components/SettingsDialog';
 import { TabBar, type View } from './components/TabBar';
@@ -64,6 +64,9 @@ export default function App({ onLockNow }: AppProps) {
 
   const universeRef = useRef<UniverseHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const notesRef = useRef<NotesViewHandle>(null);
+  // True while the black menu on the home fills the screen
+  const [darkHome, setDarkHome] = useState(false);
   const mapHeadRef = useRef<HTMLElement>(null);
   const filterPanelRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLElement>(null);
@@ -356,7 +359,8 @@ export default function App({ onLockNow }: AppProps) {
       if (dialog || typing || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === '/') {
         e.preventDefault();
-        searchRef.current?.focus();
+        if (view === 'notes') notesRef.current?.focusSearch();
+        else searchRef.current?.focus();
       } else if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
         createMemo();
@@ -367,7 +371,14 @@ export default function App({ onLockNow }: AppProps) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dialog, connectSourceId, createMemo, closePage]);
+  }, [dialog, connectSourceId, createMemo, closePage, view]);
+
+  // Safari's bar follows the page: black while the black menu fills the phone screen
+  const darkScreen = compact && view === 'notes' && darkHome && !pageVisible;
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta?.setAttribute('content', darkScreen ? '#000000' : '#ffffff');
+  }, [darkScreen]);
 
   // Clear the "new star" highlight after its birth animation.
   useEffect(() => {
@@ -449,7 +460,8 @@ export default function App({ onLockNow }: AppProps) {
     >
       {view === 'notes' ? (
         <NotesView
-          ref={searchRef}
+          ref={notesRef}
+          onDarkChange={setDarkHome}
           notes={matches}
           allNotes={data.notes}
           linkTotal={data.connections.length}
@@ -665,7 +677,12 @@ export default function App({ onLockNow }: AppProps) {
       {showTabBar && (
         <TabBar
           view={view}
-          onViewChange={changeView}
+          dark={view === 'notes' && darkHome}
+          onViewChange={(next) => {
+            // Tapping メモ again goes back to the picture
+            if (next === 'notes' && view === 'notes') notesRef.current?.goHome();
+            changeView(next);
+          }}
           onCreate={() => createMemo()}
           onOpenHistory={requestHistory}
           onOpenSettings={() => setDialog({ kind: 'settings' })}
