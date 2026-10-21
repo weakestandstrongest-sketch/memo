@@ -16,9 +16,11 @@ export function createSampleUniverse(now = new Date()): UniverseData {
         '・下の黒い ＋ ボタンで、すぐに新しいメモを書けます（タイトルはあとからでも大丈夫）。\n' +
         '・本文をタップすれば、そのまま書き足せます。書いた内容は自動で保存されます。\n' +
         '・メモの「つなぐ」で、関係のあるメモ同士を結べます。\n' +
+        '・「星の形」で、メモごとに好きな星の形を選べます（16種類）。\n' +
         '・下の「星図」で、メモのつながりを星座のように眺められます。\n\n' +
         'サンプルのメモは、自由に編集・削除してかまいません。',
       category: 'other',
+      star: 'sparkle',
       age: 60 * 24 * 3,
       x: 0,
       y: 0,
@@ -30,6 +32,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
         'シリコンに別の原子を少し混ぜる（ドーピング）と、n型とp型の領域ができる。' +
         '両者が接する部分（pn接合）では電流が一方向にしか流れない。これがダイオードやトランジスタの基本。',
       category: 'learning',
+      star: 'gem',
       age: 60 * 24 * 2,
       x: 250,
       y: -150,
@@ -39,6 +42,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
       title: '研究目標：次世代の半導体材料',
       body: 'シリコンの次に来る材料（窒化ガリウム、2次元材料など）を、将来の研究テーマとして調べる。',
       category: 'goals',
+      star: 'sun',
       age: 60 * 30,
       x: 430,
       y: -10,
@@ -48,6 +52,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
       title: 'アイデア：考えの地図',
       body: 'メモをフォルダの中のファイルではなく、「訪れる場所」として扱えたらどうだろう？',
       category: 'ideas',
+      star: 'comet',
       age: 60 * 26,
       x: -230,
       y: -170,
@@ -57,6 +62,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
       title: 'TypeScript の基本を学ぶ',
       body: '型・インターフェース、そして実行前にコンパイラがミスを見つけてくれるしくみ。',
       category: 'learning',
+      star: 'ring',
       age: 60 * 20,
       x: -330,
       y: 70,
@@ -66,6 +72,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
       title: '朝の散歩で考えたこと',
       body: '今日は快晴。歩いているときがいちばん考えがまとまる。大事なことは散歩しながら決めるといいかもしれない。',
       category: 'journal',
+      star: 'flower',
       age: 60 * 5,
       x: 120,
       y: 230,
@@ -75,6 +82,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
       title: 'ハーフマラソンを走る',
       body: '週3回トレーニングする。目標は来年の春。',
       category: 'goals',
+      star: 'burst',
       age: 60 * 3,
       x: 330,
       y: 300,
@@ -85,6 +93,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
       title: '',
       body: '牛乳・卵・コーヒー豆を買う\n帰りに本屋にも寄る',
       category: 'other',
+      star: 'snow',
       age: 20,
       x: -40,
       y: 400,
@@ -94,6 +103,7 @@ export function createSampleUniverse(now = new Date()): UniverseData {
       title: 'アイデア：週に一度のふり返り',
       body: '毎週日曜日に、その週に書いたメモを見返して、関係のあるメモ同士をつなぐ。',
       category: 'ideas',
+      star: 'heart',
       age: 45,
       x: -130,
       y: 250,

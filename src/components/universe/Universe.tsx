@@ -21,7 +21,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { CATEGORY_LIST, INK } from '../../domain/categories';
+import { INK } from '../../domain/categories';
 import { ja } from '../../i18n/ja';
 import { galaxyCircles, type GalaxyCircle } from '../../domain/groups';
 import { boundsOf, focusRing, type Bounds } from '../../domain/layout';
@@ -879,7 +879,6 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
     return pickVisibleLabels(candidates);
     // emphasisOf only depends on the values listed here.
   }, [data.notes, displayLayout, degrees, view.k, starScale, labelSize, focusId, matchIds, neighbors]);
-  const categoryOf = useMemo(() => new Map(data.notes.map((n) => [n.id, n.category])), [data.notes]);
 
   // Selected / hovered stars are drawn last so they sit on top.
   const orderedNotes = useMemo(() => {
@@ -933,19 +932,11 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
         <defs>
           {/* Monochrome: stars are solid ink; their "glow" is a faint halo. Groups are ink too
               (the stored group color is kept in the data but not shown). */}
-          {CATEGORY_LIST.map((c) => (
-            <radialGradient key={`glow-${c.id}`} id={`glow-${c.id}`}>
-              <stop offset="0%" stopColor={c.color} stopOpacity={0.14} />
-              <stop offset="40%" stopColor={c.color} stopOpacity={0.04} />
-              <stop offset="100%" stopColor={c.color} stopOpacity={0} />
-            </radialGradient>
-          ))}
-          {CATEGORY_LIST.map((c) => (
-            <radialGradient key={`core-${c.id}`} id={`core-${c.id}`}>
-              <stop offset="0%" stopColor={c.color} />
-              <stop offset="100%" stopColor={c.color} />
-            </radialGradient>
-          ))}
+          <radialGradient id="star-glow">
+            <stop offset="0%" stopColor={INK} stopOpacity={0.14} />
+            <stop offset="40%" stopColor={INK} stopOpacity={0.04} />
+            <stop offset="100%" stopColor={INK} stopOpacity={0} />
+          </radialGradient>
           {galaxies.map((c) => (
             <radialGradient key={`galaxy-${c.group.id}`} id={`galaxy-${c.group.id}`}>
               <stop offset="0%" stopColor={INK} stopOpacity={0.06} />
@@ -981,7 +972,7 @@ export const Universe = forwardRef<UniverseHandle, UniverseProps>(function Unive
               const touchesFocus = focusId !== null && (c.sourceId === focusId || c.targetId === focusId);
               const dim = matchIds !== null && !(matchIds.has(c.sourceId) && matchIds.has(c.targetId));
               const cls = touchesFocus ? 'link link-active' : dim ? 'link link-dim' : focusId ? 'link link-faded' : 'link';
-              const color = touchesFocus ? `var(--cat-${categoryOf.get(focusId!) ?? 'other'})` : undefined;
+              const color = touchesFocus ? INK : undefined;
               return (
                 <g key={c.id} className={cls} style={color ? { color } : undefined}>
                   {touchesFocus && (

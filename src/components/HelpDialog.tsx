@@ -1,7 +1,7 @@
-import { CATEGORY_LIST } from '../domain/categories';
+import { STAR_SHAPES } from '../domain/stars';
 import { ja } from '../i18n/ja';
 import { Modal } from './Modal';
-import { CategoryIcon } from './universe/CategoryGlyph';
+import { StarIcon } from './universe/StarGlyph';
 
 export function HelpDialog({ touch, onClose }: { touch: boolean; onClose: () => void }) {
   const gestures = touch ? ja.help.touch : ja.help.mouse;
@@ -25,13 +25,11 @@ export function HelpDialog({ touch, onClose }: { touch: boolean; onClose: () => 
         ))}
       </dl>
       <h3 className="section-title">{ja.help.shapesHeading}</h3>
-      <ul className="help-legend">
-        {CATEGORY_LIST.map((c) => (
-          <li key={c.id}>
-            <CategoryIcon category={c.id} size={20} />
-            <span>
-              <strong>{c.label}</strong> — {c.shapeName}
-            </span>
+      <p className="help-data">{ja.help.shapesText}</p>
+      <ul className="help-shapes" aria-hidden="true">
+        {STAR_SHAPES.map((shape) => (
+          <li key={shape}>
+            <StarIcon shape={shape} size={22} />
           </li>
         ))}
       </ul>

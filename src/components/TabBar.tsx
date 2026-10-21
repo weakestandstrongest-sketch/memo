@@ -11,42 +11,45 @@ interface TabBarProps {
   onOpenSettings: () => void;
 }
 
-/** The bar at the bottom: メモ · 星図 · ＋ · 歴史 · 設定. */
+/**
+ * The floating bar at the bottom, iOS style: a frosted-glass pill with
+ * メモ · 星図 · 歴史 · 設定, and a round ＋ on its own at the right.
+ */
 export function TabBar({ view, onViewChange, onCreate, onOpenHistory, onOpenSettings }: TabBarProps) {
   const t = ja.tabs;
   return (
-    <nav className="tabbar" aria-label={t.label}>
-      <button
-        type="button"
-        className={`tab ${view === 'notes' ? 'is-active' : ''}`}
-        aria-current={view === 'notes' ? 'page' : undefined}
-        onClick={() => onViewChange('notes')}
-      >
-        <NotesIcon />
-        <span className="tab-label">{t.notes}</span>
-      </button>
-      <button
-        type="button"
-        className={`tab ${view === 'map' ? 'is-active' : ''}`}
-        aria-current={view === 'map' ? 'page' : undefined}
-        onClick={() => onViewChange('map')}
-      >
-        <OrbitIcon />
-        <span className="tab-label">{t.map}</span>
-      </button>
+    <div className="tabbar">
+      <nav className="tabbar-pill" aria-label={t.label}>
+        <button
+          type="button"
+          className={`tab ${view === 'notes' ? 'is-active' : ''}`}
+          aria-current={view === 'notes' ? 'page' : undefined}
+          onClick={() => onViewChange('notes')}
+        >
+          <NotesIcon />
+          <span className="tab-label">{t.notes}</span>
+        </button>
+        <button
+          type="button"
+          className={`tab ${view === 'map' ? 'is-active' : ''}`}
+          aria-current={view === 'map' ? 'page' : undefined}
+          onClick={() => onViewChange('map')}
+        >
+          <OrbitIcon />
+          <span className="tab-label">{t.map}</span>
+        </button>
+        <button type="button" className="tab" onClick={onOpenHistory}>
+          <HistoryIcon />
+          <span className="tab-label">{t.history}</span>
+        </button>
+        <button type="button" className="tab" onClick={onOpenSettings}>
+          <SettingsIcon />
+          <span className="tab-label">{t.settings}</span>
+        </button>
+      </nav>
       <button type="button" className="tab-create" onClick={onCreate} aria-label={t.create} title={t.create}>
-        <span className="tab-create-circle">
-          <PlusIcon />
-        </span>
+        <PlusIcon />
       </button>
-      <button type="button" className="tab" onClick={onOpenHistory}>
-        <HistoryIcon />
-        <span className="tab-label">{t.history}</span>
-      </button>
-      <button type="button" className="tab" onClick={onOpenSettings}>
-        <SettingsIcon />
-        <span className="tab-label">{t.settings}</span>
-      </button>
-    </nav>
+    </div>
   );
 }

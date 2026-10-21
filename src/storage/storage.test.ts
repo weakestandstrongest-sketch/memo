@@ -105,6 +105,17 @@ describe('sanitizeUniverse', () => {
     expect(old.repairs).toBe(0);
   });
 
+  it('keeps a valid star shape and drops an unknown one', () => {
+    const result = sanitizeUniverse({
+      notes: [
+        { id: 'a', title: 'A', category: 'ideas', star: 'comet' },
+        { id: 'b', title: 'B', category: 'ideas', star: 'dragon' },
+      ],
+    })!;
+    expect(result.data.notes[0].star).toBe('comet');
+    expect(result.data.notes[1].star).toBeUndefined();
+  });
+
   it('rejects non-universe values', () => {
     expect(sanitizeUniverse(null)).toBeNull();
     expect(sanitizeUniverse([])).toBeNull();

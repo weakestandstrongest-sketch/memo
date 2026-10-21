@@ -9,6 +9,7 @@ import { LIMITS, pairKey } from '../domain/universe';
 import { GROUP_COLORS, GROUP_NAME_MAX } from '../domain/groups';
 import type { Connection, ConnectionOrigin, Group, Layout, Note, UniverseData } from '../domain/types';
 import { createId } from '../utils/id';
+import { isStarShape } from '../domain/stars';
 
 export interface SanitizeResult {
   data: UniverseData;
@@ -86,6 +87,7 @@ export function sanitizeUniverse(raw: unknown, now = new Date()): SanitizeResult
       createdAt,
       updatedAt,
     };
+    if (isStarShape(item.star)) note.star = item.star;
     if (item.sample === true) note.sample = true;
     if (item.pinned === true) note.pinned = true;
     if (isValidDate(item.lastOpenedAt)) note.lastOpenedAt = item.lastOpenedAt;

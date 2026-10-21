@@ -7,6 +7,7 @@ import { createId } from '../utils/id';
 import { groupCenter } from './groups';
 import { findFreePosition, resolveOverlap } from './layout';
 import type { CategoryId, Connection, Note, NoteDraft, Position, UniverseData } from './types';
+import type { StarShape } from './stars';
 
 export const LIMITS = {
   title: 120,
@@ -46,6 +47,8 @@ export interface NewNoteInput {
   title: string;
   body: string;
   category: CategoryId;
+  /** Look of the star; a new memo without one keeps the old per-kind shape. */
+  star?: StarShape;
   /** Group id, or null / undefined for "no group". */
   groupId?: string | null;
 }
@@ -57,6 +60,7 @@ export function buildNote(input: NewNoteInput, now = new Date()): Note {
     title: input.title.trim().slice(0, LIMITS.title),
     body: input.body.slice(0, LIMITS.body),
     category: input.category,
+    ...(input.star ? { star: input.star } : {}),
     createdAt: iso,
     updatedAt: iso,
     ...(input.groupId ? { groupId: input.groupId } : {}),
@@ -92,6 +96,7 @@ export function updateNote(
     ...(patch.title !== undefined && { title: patch.title.trim().slice(0, LIMITS.title) }),
     ...(patch.body !== undefined && { body: patch.body.slice(0, LIMITS.body) }),
     ...(patch.category !== undefined && { category: patch.category }),
+    ...(patch.star !== undefined && { star: patch.star }),
     updatedAt: now.toISOString(),
   };
   if (patch.groupId !== undefined) {

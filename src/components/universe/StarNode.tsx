@@ -1,9 +1,10 @@
 import { memo, type KeyboardEvent } from 'react';
 import { ja } from '../../i18n/ja';
-import { CATEGORIES } from '../../domain/categories';
 import type { Note } from '../../domain/types';
 import { truncateByWidth } from '../../utils/format';
-import { Glyph } from './CategoryGlyph';
+import { Glyph } from './StarGlyph';
+import { INK } from '../../domain/categories';
+import { shapeOf } from '../../domain/stars';
 import { displayTitle } from '../../utils/noteTitle';
 
 export type StarEmphasis =
@@ -69,7 +70,7 @@ export const StarNode = memo(function StarNode({
   dropTarget = false,
   onKeyActivate,
 }: StarNodeProps) {
-  const category = CATEGORIES[note.category];
+  const shape = shapeOf(note);
   const label = truncateByWidth(displayTitle(note), MAX_LABEL_WIDTH);
 
   const onKeyDown = (e: KeyboardEvent<SVGGElement>) => {
@@ -98,11 +99,10 @@ export const StarNode = memo(function StarNode({
       data-note-id={note.id}
       role="button"
       tabIndex={0}
-      aria-label={ja.star.ariaLabel(displayTitle(note), category.label, category.shapeName)}
+      aria-label={ja.star.ariaLabel(displayTitle(note), ja.stars[shape])}
       aria-pressed={emphasis === 'selected'}
       onKeyDown={onKeyDown}
       style={{
-        ['--star-color' as string]: category.color,
         ['--intro-delay' as string]: `${Math.min(introIndex, 40) * 35}ms`,
         ['--fresh' as string]: freshness,
       }}
@@ -110,19 +110,14 @@ export const StarNode = memo(function StarNode({
       <g transform={`scale(${scale})`}>
         <g className="star-body">
           <circle className="star-hit" r={hitRadius} />
-          <circle className="star-glow" r={size * 3} fill={`url(#glow-${note.category})`} />
+          <circle className="star-glow" r={size * 3} fill="url(#star-glow)" />
           {isNew && <circle className="star-birth-ring" r={size * 1.6} />}
           {dropTarget && <circle className="star-drop-ring" r={size * 2.2 + 4} />}
           {(emphasis === 'selected' || emphasis === 'match') && (
             <circle className="star-ring" r={size * 1.75 + 2} />
           )}
           <g className="star-glyph">
-            <Glyph
-              shape={category.shape}
-              r={size}
-              fill={`url(#core-${note.category})`}
-              stroke={category.color}
-            />
+            <Glyph shape={shape} r={size} fill={INK} />
           </g>
           {dropTarget && (
             <text className="star-drop-label" y={-(size * 2.2 + 10)} textAnchor="middle" style={{ fontSize: labelSize }}>

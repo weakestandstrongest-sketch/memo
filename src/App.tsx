@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CATEGORY_IDS, type CategoryId, type Position, type UniverseData } from './domain/types';
+import type { Note, Position, UniverseData } from './domain/types';
+import { randomShape } from './domain/stars';
 import { formatDateTime } from './utils/format';
 import { displayTitle } from './utils/noteTitle';
 import { GROUP_COLORS } from './domain/groups';
@@ -13,7 +14,7 @@ import { useElementRect } from './hooks/useElementRect';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useVisualViewportVars } from './hooks/useVisualViewport';
 import { BackupReminder } from './components/BackupReminder';
-import { CategoryFilter } from './components/CategoryFilter';
+import { GroupFilter, NO_GROUP } from './components/GroupFilter';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ConnectPicker } from './components/ConnectPicker';
 import { DataMenu } from './components/DataMenu';
@@ -79,7 +80,8 @@ export default function App({ onLockNow }: AppProps) {
   /** The memo just made with ＋ (its title gets the cursor). */
   const [freshId, setFreshId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [activeCats, setActiveCats] = useState<Set<CategoryId>>(() => new Set());
+  /** Group filter: group ids and/or NO_GROUP. Empty = every memo. */
+  const [activeGroups, setActiveGroups] = useState<Set<string>>(() => new Set());
   const [order, setOrder] = useState<NotesOrder>(() => (readPref('notes-order') === 'groups' ? 'groups' : 'recent'));
   /** "星図の歴史" playback: the map is shown as it was at `time`. */
   const [history, setHistory] = useState<{ start: number; end: number; time: number; playing: boolean } | null>(null);
@@ -143,20 +145,25 @@ export default function App({ onLockNow }: AppProps) {
     if (previous && previous !== selectedId) actions.deleteIfBlank(previous);
   }, [selectedId, actions]);
 
-  const filterActive = query.trim().length > 0 || activeCats.size > 0;
+  const groupIds = useMemo(() => new Set(data.groups.map((g) => g.id)), [data.groups]);
+  const groupKey = useCallback(
+    (n: Note) => (n.groupId && groupIds.has(n.groupId) ? n.groupId : NO_GROUP),
+    [groupIds],
+  );
+  const filterActive = query.trim().length > 0 || activeGroups.size > 0;
   const matches = useMemo(
     () =>
       data.notes.filter(
-        (n) => (activeCats.size === 0 || activeCats.has(n.category)) && matchesQuery(n, query),
+        (n) => (activeGroups.size === 0 || activeGroups.has(groupKey(n))) && matchesQuery(n, query),
       ),
-    [data.notes, activeCats, query],
+    [data.notes, activeGroups, query, groupKey],
   );
   const matchIds = useMemo(() => (filterActive ? new Set(matches.map((n) => n.id)) : null), [filterActive, matches]);
-  const counts = useMemo(() => {
-    const c = Object.fromEntries(CATEGORY_IDS.map((id) => [id, 0])) as Record<CategoryId, number>;
-    for (const n of data.notes) c[n.category]++;
+  const groupCounts = useMemo(() => {
+    const c = new Map<string, number>();
+    for (const n of data.notes) c.set(groupKey(n), (c.get(groupKey(n)) ?? 0) + 1);
     return c;
-  }, [data.notes]);
+  }, [data.notes, groupKey]);
   const linkCounts = useMemo(() => {
     const m = new Map<string, number>();
     for (const c of data.connections) {
@@ -216,15 +223,17 @@ export default function App({ onLockNow }: AppProps) {
         );
         near = (recent && data.layout[recent.id]) || { x: 0, y: 0 };
       }
-      const category = activeCats.size === 1 ? [...activeCats][0] : 'other';
-      const note = actions.createNote({ title: '', body: '', category, groupId: null }, near);
+      // Filtering one group: the new memo joins it.
+      const only = activeGroups.size === 1 ? [...activeGroups][0] : null;
+      const groupId = only && only !== NO_GROUP ? only : null;
+      const note = actions.createNote({ title: '', body: '', category: 'other', star: randomShape(), groupId }, near);
       setHistory(null);
       setConnectSourceId(null);
       setSelectedId(note.id);
       setFreshId(note.id);
       setNewStarId(note.id);
     },
-    [actions, activeCats, data, view],
+    [actions, activeGroups, data, view],
   );
 
   const closePage = useCallback(() => {
@@ -327,8 +336,8 @@ export default function App({ onLockNow }: AppProps) {
     showToast(note.pinned ? ja.toast.unpinned : ja.toast.pinned);
   };
 
-  const toggleCategory = (id: CategoryId) =>
-    setActiveCats((prev) => {
+  const toggleGroup = (id: string) =>
+    setActiveGroups((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -336,7 +345,7 @@ export default function App({ onLockNow }: AppProps) {
     });
   const clearFilters = () => {
     setQuery('');
-    setActiveCats(new Set());
+    setActiveGroups(new Set());
   };
 
   // --- Keyboard shortcuts (desktop) -----------------------------------------
@@ -442,16 +451,17 @@ export default function App({ onLockNow }: AppProps) {
         <NotesView
           ref={searchRef}
           notes={matches}
-          totalCount={data.notes.length}
+          allNotes={data.notes}
+          linkTotal={data.connections.length}
           groups={data.groups}
           linkCounts={linkCounts}
           selectedId={pageVisible ? selectedId : null}
           query={query}
           onQueryChange={setQuery}
-          activeCats={activeCats}
-          categoryCounts={counts}
-          onToggleCategory={toggleCategory}
-          onClearCategories={() => setActiveCats(new Set())}
+          activeGroups={activeGroups}
+          groupCounts={groupCounts}
+          onToggleGroup={toggleGroup}
+          onClearGroups={() => setActiveGroups(new Set())}
           order={order}
           onOrderChange={(o) => {
             setOrder(o);
@@ -459,6 +469,7 @@ export default function App({ onLockNow }: AppProps) {
           }}
           onOpen={(id) => openNote(id)}
           onCreate={() => createMemo()}
+          onShowMap={() => changeView('map')}
           onShowGroupInMap={(id) => {
             setSelectedId(null);
             setView('map');
@@ -506,25 +517,29 @@ export default function App({ onLockNow }: AppProps) {
             }
             chips={
               roomyFilters ? null : (
-                <CategoryFilter
-                  variant="chips"
-                  active={activeCats}
-                  counts={counts}
-                  onToggle={toggleCategory}
-                  onClear={() => setActiveCats(new Set())}
-                />
+                data.groups.length === 0 ? null : (
+                  <GroupFilter
+                    variant="chips"
+                    groups={data.groups}
+                    active={activeGroups}
+                    counts={groupCounts}
+                    onToggle={toggleGroup}
+                    onClear={() => setActiveGroups(new Set())}
+                  />
+                )
               )
             }
           />
 
-          {roomyFilters && (
+          {roomyFilters && data.groups.length > 0 && (
             <div ref={filterPanelRef} className="filter-panel">
-              <CategoryFilter
+              <GroupFilter
                 variant="panel"
-                active={activeCats}
-                counts={counts}
-                onToggle={toggleCategory}
-                onClear={() => setActiveCats(new Set())}
+                groups={data.groups}
+                active={activeGroups}
+                counts={groupCounts}
+                onToggle={toggleGroup}
+                onClear={() => setActiveGroups(new Set())}
               />
             </div>
           )}

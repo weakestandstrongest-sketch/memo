@@ -5,7 +5,7 @@
  * identifiers stay in English; only the strings shown to the user live in this file.
  * Text the user types (memo titles and bodies) is never translated.
  */
-import type { CategoryId } from '../domain/types';
+import type { StarShape } from '../domain/stars';
 
 export const ja = {
   app: {
@@ -14,13 +14,25 @@ export const ja = {
     universeLabel: 'あなたの星図。ひとつひとつの星がメモです。',
   },
 
-  categories: {
-    ideas: { label: 'アイデア', shapeName: 'きらめき', description: 'ひらめき・考え・「もしも」' },
-    learning: { label: '学び', shapeName: '輪のある惑星', description: '学んだこと・発見したこと' },
-    goals: { label: '目標', shapeName: '星', description: 'これから目指したいこと' },
-    journal: { label: '日記', shapeName: '三日月', description: '出来事・気持ち・ふり返り' },
-    other: { label: 'メモ', shapeName: 'ひし形', description: 'ふつうのメモ（迷ったらこれ）' },
-  } satisfies Record<CategoryId, { label: string; shapeName: string; description: string }>,
+  /** Names of the star shapes (for screen readers and the shape picker). */
+  stars: {
+    sparkle: 'きらめき',
+    star: '星',
+    burst: '光',
+    twinkle: 'またたき',
+    star6: '六芒星',
+    snow: '雪の結晶',
+    diamond: 'ひし形',
+    gem: '宝石',
+    orb: 'まる',
+    ring: 'わっか',
+    planet: '惑星',
+    crescent: '三日月',
+    sun: '太陽',
+    comet: '彗星',
+    heart: 'ハート',
+    flower: '花',
+  } satisfies Record<StarShape, string>,
 
   common: {
     close: '閉じる',
@@ -42,8 +54,13 @@ export const ja = {
     heading: 'メモ',
     count: (n: number) => `${n}件`,
     moreOptions: 'メニュー',
-    quickTitle: '新しいメモ',
-    quickText: 'タップして、すぐに書きはじめる',
+    heroSub: '思いついたことを、星にしよう',
+    countUnit: '件のメモ',
+    heroLinks: (n: number) => `つながり ${n}本`,
+    showMap: '星図を見る',
+    continue: 'つづきを書く',
+    reveal: 'メモを見る',
+    listLabel: 'メモの一覧',
     viewLabel: '並べ方',
     viewRecent: '新しい順',
     viewGroups: 'グループ',
@@ -75,7 +92,9 @@ export const ja = {
     close: '閉じる',
     sheetExpand: '大きく表示',
     sheetCollapse: '小さく表示',
-    kind: '種類',
+    shape: '星の形',
+    shapeChange: '星の形を変える',
+    shapeDone: '星の形の選択を閉じる',
     group: 'グループ',
     noGroup: 'なし',
     newGroupOption: '＋ 新しいグループ…',
@@ -116,9 +135,10 @@ export const ja = {
   },
 
   filter: {
-    heading: '種類',
-    groupLabel: '種類で絞り込む',
+    heading: 'グループ',
+    groupLabel: 'グループで絞り込む',
     all: 'すべて',
+    none: 'グループなし',
     status: (matched: number, total: number) => `${total}件中 ${matched}件が一致`,
   },
 
@@ -346,7 +366,8 @@ export const ja = {
       ['星図の何もない所をダブルクリック', 'その場所にメモをつくる'],
       ['ドラッグ・マウスホイール', '星図を移動・拡大縮小'],
     ],
-    shapesHeading: '種類と星の形',
+    shapesHeading: '星の形',
+    shapesText: '星の形はメモごとに自由に選べます（メモのページの「星の形」）。新しいメモには、いずれかの形がランダムにつきます。',
     dataHeading: 'データの保存について',
     dataText:
       'メモはこの端末のこのブラウザの中にだけ保存されます。PC と iPhone のデータは自動では同期されません。' +
@@ -375,7 +396,7 @@ export const ja = {
 
   star: {
     dropToConnect: 'ここで離すとつなぐ',
-    ariaLabel: (title: string, category: string, shape: string) => `${title}（${category}・${shape}）`,
+    ariaLabel: (title: string, shape: string) => `${title}（${shape}）`,
   },
 
   crash: {

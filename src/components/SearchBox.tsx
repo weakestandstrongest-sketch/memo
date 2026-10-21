@@ -1,10 +1,11 @@
 import { forwardRef, useRef, useState, type KeyboardEvent } from 'react';
 import { ja } from '../i18n/ja';
-import { CATEGORIES } from '../domain/categories';
 import type { Note } from '../domain/types';
 import { CloseIcon, SearchIcon } from './icons';
 import { isComposing } from '../utils/ime';
-import { CategoryIcon } from './universe/CategoryGlyph';
+import { StarIcon } from './universe/StarGlyph';
+import { shapeOf } from '../domain/stars';
+import { formatRelative } from '../utils/format';
 import { displayTitle } from '../utils/noteTitle';
 
 interface SearchBoxProps {
@@ -113,10 +114,10 @@ export const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(function S
                 onClick={() => openResult(n.id)}
                 onMouseEnter={() => setActive(i)}
               >
-                <CategoryIcon category={n.category} size={18} />
+                <StarIcon shape={shapeOf(n)} size={18} />
                 <span className="search-result-text">
                   <span className="search-result-title">{displayTitle(n)}</span>
-                  <span className="search-result-meta">{CATEGORIES[n.category].label}</span>
+                  <span className="search-result-meta">{formatRelative(n.updatedAt)}</span>
                 </span>
               </button>
             </li>

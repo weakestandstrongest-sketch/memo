@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { ja } from '../i18n/ja';
-import { CATEGORIES } from '../domain/categories';
 import type { Note, UniverseData } from '../domain/types';
 import { matchesQuery, neighborIds } from '../domain/universe';
 import { Modal } from './Modal';
 import { TargetIcon } from './icons';
-import { CategoryIcon } from './universe/CategoryGlyph';
+import { StarIcon } from './universe/StarGlyph';
+import { shapeOf } from '../domain/stars';
+import { formatRelative } from '../utils/format';
 import { displayTitle } from '../utils/noteTitle';
 
 interface ConnectPickerProps {
@@ -77,10 +78,10 @@ export function ConnectPicker({ source, data, onPick, onPickInUniverse, onClose 
                     disabled={isConnected}
                     onClick={() => onPick(n.id)}
                   >
-                    <CategoryIcon category={n.category} size={20} />
+                    <StarIcon shape={shapeOf(n)} size={20} />
                     <span className="picker-item-text">
                       <span className="picker-item-title">{displayTitle(n)}</span>
-                      <span className="picker-item-meta">{CATEGORIES[n.category].label}</span>
+                      <span className="picker-item-meta">{formatRelative(n.updatedAt)}</span>
                     </span>
                     {isConnected && <span className="badge">{ja.connect.alreadyConnected}</span>}
                   </button>

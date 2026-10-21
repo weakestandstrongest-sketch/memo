@@ -8,6 +8,8 @@
  * touching the rendering code.
  */
 
+import type { StarShape } from './stars';
+
 export const CATEGORY_IDS = ['ideas', 'learning', 'goals', 'journal', 'other'] as const;
 
 export type CategoryId = (typeof CATEGORY_IDS)[number];
@@ -16,7 +18,10 @@ export interface Note {
   id: string;
   title: string;
   body: string;
+  /** Old "kind" of the memo. No longer shown; kept so older data and backups stay valid. */
   category: CategoryId;
+  /** The look of the memo's star in the map. Missing in older data (see shapeOf). */
+  star?: StarShape;
   /** ISO 8601 timestamp, e.g. "2026-10-19T08:30:00.000Z" */
   createdAt: string;
   /** ISO 8601 timestamp of the last edit. */

@@ -1,13 +1,13 @@
 import { forwardRef, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { CATEGORY_LIST } from '../domain/categories';
-import type { CategoryId, Group, Note } from '../domain/types';
+import { shapeOf, STAR_SHAPES } from '../domain/stars';
+import type { Group, Note } from '../domain/types';
 import { LIMITS, type LinkedNote, type NewNoteInput } from '../domain/universe';
 import { ja } from '../i18n/ja';
 import { formatDateTime, formatRelative } from '../utils/format';
 import { displayTitle } from '../utils/noteTitle';
 import { AutoField, type AutoFieldHandle } from './AutoField';
 import { BackIcon, ChevronIcon, CloseIcon, OrbitIcon, PinIcon, SmallPlusIcon, TrashIcon, UnlinkIcon } from './icons';
-import { CategoryIcon } from './universe/CategoryGlyph';
+import { StarIcon } from './universe/StarGlyph';
 
 export type NotePageVariant =
   /** From the memo list: full screen on phones, the right-hand pane on wide screens. */
@@ -68,6 +68,8 @@ export const NotePage = forwardRef<HTMLElement, NotePageProps>(function NotePage
   const [expanded, setExpanded] = useState(false);
   /** A field has the cursor: on phones the page then fills the space above the keyboard. */
   const [writing, setWriting] = useState(false);
+  const [shapesOpen, setShapesOpen] = useState(false);
+  const shape = shapeOf(note);
   const [openLinks, setOpenLinks] = useState<Set<string>>(() => new Set());
   const lastOpened = useRef<string | null>(null);
 
@@ -215,27 +217,40 @@ export const NotePage = forwardRef<HTMLElement, NotePageProps>(function NotePage
           />
 
           <dl className="note-props">
-            <div className="note-prop">
-              <dt>{t.kind}</dt>
+            <div className="note-prop note-prop-shape">
+              <dt>{t.shape}</dt>
               <dd>
-                <div className="kind-picker" role="radiogroup" aria-label={t.kind}>
-                  {CATEGORY_LIST.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={note.category === c.id}
-                      className={`kind-option ${note.category === c.id ? 'is-on' : ''}`}
-                      onClick={() => onUpdate({ category: c.id as CategoryId })}
-                      title={c.description}
-                    >
-                      <CategoryIcon category={c.id} size={14} />
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  className={`shape-current ${shapesOpen ? 'is-open' : ''}`}
+                  onClick={() => setShapesOpen((v) => !v)}
+                  aria-expanded={shapesOpen}
+                  aria-controls={`shapes-${note.id}`}
+                  aria-label={shapesOpen ? t.shapeDone : `${t.shapeChange}（${ja.stars[shape]}）`}
+                >
+                  <StarIcon shape={shape} size={20} />
+                  <span>{ja.stars[shape]}</span>
+                </button>
               </dd>
             </div>
+            {shapesOpen && (
+              <div id={`shapes-${note.id}`} className="shape-picker" role="radiogroup" aria-label={t.shape}>
+                {STAR_SHAPES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="radio"
+                    aria-checked={shape === s}
+                    aria-label={ja.stars[s]}
+                    title={ja.stars[s]}
+                    className={`shape-option ${shape === s ? 'is-on' : ''}`}
+                    onClick={() => onUpdate({ star: s })}
+                  >
+                    <StarIcon shape={s} size={22} />
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="note-prop">
               <dt>
                 <label htmlFor="note-group">{t.group}</label>
@@ -314,7 +329,7 @@ export const NotePage = forwardRef<HTMLElement, NotePageProps>(function NotePage
                           aria-controls={panelId}
                           aria-label={isOpen ? t.hideLinkedMemo(title) : t.showLinkedMemo(title)}
                         >
-                          <CategoryIcon category={other.category} size={16} />
+                          <StarIcon shape={shapeOf(other)} size={16} />
                           <span className="link-title">{title}</span>
                           <span className="link-chevron" aria-hidden="true">
                             <ChevronIcon />
