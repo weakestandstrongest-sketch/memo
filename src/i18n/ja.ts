@@ -61,6 +61,8 @@ export const ja = {
     continue: 'つづきを書く',
     reveal: 'メモを見る',
     listLabel: 'メモの一覧',
+    sheetHint: '下にスワイプ、または × で閉じる',
+    closeList: '一覧を閉じる',
     viewLabel: '並べ方',
     viewRecent: '新しい順',
     viewGroups: 'グループ',

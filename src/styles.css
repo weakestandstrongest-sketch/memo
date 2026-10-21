@@ -263,27 +263,30 @@ p {
   position: fixed;
   inset: 0;
   overflow: hidden;
+  background: #000; /* seen around the picture when the sheet is up */
   animation: view-in 0.35s var(--ease);
-}
-
-.notes-scroll {
-  position: absolute;
-  inset: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: y proximity;
 }
 
 /* First screen, like a bank app's wallet: a big title, a picture and a few numbers */
 .notes-hero {
-  position: relative;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  overflow: hidden;
   padding: calc(var(--safe-top) + 12px) calc(var(--safe-right) + 20px) calc(var(--tabbar-height) + 4px)
     calc(var(--safe-left) + 20px);
-  scroll-snap-align: start;
+  background: var(--bg);
+  touch-action: none; /* a drag up here pulls the sheet */
+  user-select: none;
+  -webkit-user-select: none;
+  /* Steps back (smaller, dimmer) as the sheet comes up over it */
+  transform-origin: 50% 0;
+  transform: translateY(calc(var(--sheet-progress, 0) * (var(--safe-top) + 4px)))
+    scale(calc(1 - 0.06 * var(--sheet-progress, 0)));
+  border-radius: calc(var(--sheet-progress, 0) * 28px);
+  opacity: calc(1 - 0.5 * var(--sheet-progress, 0));
+  transition: transform 0.45s var(--ease), border-radius 0.45s var(--ease), opacity 0.45s var(--ease);
 }
 
 .hero-head {
@@ -469,9 +472,9 @@ p {
   animation: reveal-nudge 2.2s ease-in-out 1s infinite;
 }
 
-/* After swiping up: the memos, on black (like a bank app's dark screens).
+/* The sheet that slides up over the picture: the memos, on black.
    The light tokens are swapped for dark ones, so everything inside follows. */
-.notes-list-section {
+.notes-sheet {
   --bg: #000000;
   --bg-soft: #1c1c1c;
   --bg-softer: #111111;
@@ -480,34 +483,133 @@ p {
   --ink: #ffffff;
   --muted: #a6a6a6;
   --faint: #8e8e8e;
-  min-height: 100%;
-  padding: calc(var(--safe-top) + 28px) calc(var(--safe-right) + 20px) calc(var(--tabbar-height) + 32px)
-    calc(var(--safe-left) + 20px);
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  top: calc(var(--safe-top) + 10px);
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px 28px 0 0;
   background: var(--bg);
   color: var(--ink);
-  scroll-snap-align: start;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+  transform: translateY(105%);
+  visibility: hidden;
+  transition: transform 0.45s var(--ease), visibility 0s linear 0.45s;
+}
+
+.notes-sheet.is-open {
+  transform: translateY(0);
+  visibility: visible;
+  transition: transform 0.45s var(--ease);
+}
+
+/* While a finger holds the sheet, it follows the finger exactly */
+.notes-view.is-dragging .notes-sheet {
+  visibility: visible;
+  transition: none;
+}
+
+.notes-view.is-dragging .notes-hero {
+  transition: none;
+}
+
+/* The header is the handle: drag it down to close */
+.sheet-head {
+  flex: none;
+  padding: 8px calc(var(--safe-right) + 20px) 6px calc(var(--safe-left) + 20px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.notes-sheet-handle {
+  display: block;
+  width: 40px;
+  height: 5px;
+  margin: 0 auto 14px;
+  border-radius: 3px;
+  background: #5a5a5a;
+}
+
+.sheet-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.sheet-label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+.sheet-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-close {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-soft);
+  color: var(--ink);
+  transition: transform 0.12s ease, background 0.2s ease;
+}
+
+.sheet-close:active {
+  transform: scale(0.92);
+}
+
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px calc(var(--safe-right) + 20px) calc(var(--tabbar-height) + 32px) calc(var(--safe-left) + 20px);
 }
 
 /* Things that were white-on-black become black-on-white */
-.notes-list-section .button-primary,
-.notes-list-section .filter-chip.is-on {
+.notes-sheet .button-primary,
+.notes-sheet .filter-chip.is-on {
   color: #000;
 }
 
-.notes-list-section .filter-chip.is-on .filter-count {
+.notes-sheet .filter-chip.is-on .filter-count {
   color: rgba(0, 0, 0, 0.6);
 }
 
-.notes-list-section .segmented-option.is-on {
+.notes-sheet .segmented-option.is-on {
   background: #3a3a3a;
   box-shadow: none;
 }
 
-.notes-list-section .star-icon [fill]:not([fill='none']) {
+.notes-sheet .star-icon [fill]:not([fill='none']) {
   fill: #fff;
 }
 
-.notes-list-section .star-icon [stroke] {
+.notes-sheet .star-icon [stroke] {
   stroke: #fff;
 }
 
@@ -2989,7 +3091,8 @@ p {
 /* Phones (portrait) and narrow windows */
 @media (max-width: 719px) {
   .notes-hero,
-  .notes-list-section {
+  .sheet-head,
+  .sheet-body {
     padding-left: calc(var(--safe-left) + 16px);
     padding-right: calc(var(--safe-right) + 16px);
   }

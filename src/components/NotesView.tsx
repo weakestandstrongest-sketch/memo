@@ -1,6 +1,16 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { shapeOf } from '../domain/stars';
 import type { Group, Note } from '../domain/types';
+import { useSheet } from '../hooks/useSheet';
 import { ja } from '../i18n/ja';
 import { dateBucket, formatLongDate, formatRelative, type DateBucket } from '../utils/format';
 import { displayTitle, previewText } from '../utils/noteTitle';
@@ -12,7 +22,7 @@ import { StarIcon } from './universe/StarGlyph';
 export type NotesOrder = 'recent' | 'groups';
 
 export interface NotesViewHandle {
-  /** Shows the list and puts the cursor in the search field. */
+  /** Opens the list and puts the cursor in the search field. */
   focusSearch: () => void;
   /** Back to the picture at the top. */
   goHome: () => void;
@@ -45,7 +55,7 @@ interface NotesViewProps {
   menu: ReactNode;
   /** "Now", for dates and "3分前". */
   now: number;
-  /** Tells whether the black list fills the screen (the tab bar turns dark). */
+  /** Tells whether the black list is open (the tab bar turns dark). */
   onDarkChange?: (dark: boolean) => void;
 }
 
@@ -55,7 +65,7 @@ const byRecent = (a: Note, b: Note) => b.updatedAt.localeCompare(a.updatedAt);
 
 /**
  * Home. The first screen is a picture with a few numbers (like a bank app's wallet);
- * swiping up brings the search and the list of memos, on black.
+ * swiping up slides a black sheet over it with the search and the list of memos.
  */
 export const NotesView = forwardRef<NotesViewHandle, NotesViewProps>(function NotesView(
   {
@@ -85,10 +95,12 @@ export const NotesView = forwardRef<NotesViewHandle, NotesViewProps>(function No
   },
   ref,
 ) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const heroRef = useRef<HTMLElement>(null);
-  const listRef = useRef<HTMLElement>(null);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const wantSearch = useRef(false);
+  const sheet = useSheet(viewRef, bodyRef);
+  const { open, setOpen } = sheet;
   const filtering = query.trim().length > 0 || activeGroups.size > 0;
   const nowDate = new Date(now);
   const latest = useMemo(
@@ -96,32 +108,38 @@ export const NotesView = forwardRef<NotesViewHandle, NotesViewProps>(function No
     [allNotes],
   );
 
-  const scrollBehavior = (): ScrollBehavior =>
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
-  const showList = () => listRef.current?.scrollIntoView({ block: 'start', behavior: scrollBehavior() });
-
   useImperativeHandle(ref, () => ({
     focusSearch: () => {
-      listRef.current?.scrollIntoView({ block: 'start' });
+      wantSearch.current = true;
+      setOpen(true);
       searchRef.current?.focus();
     },
-    goHome: () => scrollRef.current?.scrollTo({ top: 0, behavior: scrollBehavior() }),
+    goHome: () => setOpen(false),
   }));
 
-  // The tab bar turns dark once the black list covers most of the screen.
+  // Focus once the sheet is no longer inert, still inside the tap (so iOS shows the keyboard).
+  useLayoutEffect(() => {
+    if (open && wantSearch.current) {
+      wantSearch.current = false;
+      searchRef.current?.focus();
+    }
+  }, [open]);
+
   useEffect(() => {
-    const el = heroRef.current;
-    if (!el || !onDarkChange || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(([entry]) => onDarkChange(entry.intersectionRatio < 0.4), {
-      root: scrollRef.current,
-      threshold: [0, 0.4, 1],
-    });
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      onDarkChange(false);
+    onDarkChange?.(open);
+  }, [open, onDarkChange]);
+  useEffect(() => () => onDarkChange?.(false), [onDarkChange]);
+
+  // Escape closes the list (unless a memo is open, or the cursor is in a field)
+  useEffect(() => {
+    if (!open || selectedId) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (e.key === 'Escape' && !el.closest?.('input, textarea, select, [contenteditable="true"]')) setOpen(false);
     };
-  }, [onDarkChange]);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, selectedId, setOpen]);
 
   const sections = useMemo(() => {
     const sorted = [...notes].sort(byRecent);
@@ -198,69 +216,101 @@ export const NotesView = forwardRef<NotesViewHandle, NotesViewProps>(function No
   };
 
   return (
-    <div className="notes-view" aria-label={t.heading}>
-      <div ref={scrollRef} className="notes-scroll">
-        {/* --- First screen: the picture ---------------------------------- */}
-        <section ref={heroRef} className="notes-hero" aria-label={ja.app.name}>
-          <header className="hero-head">
-            <div className="hero-titles">
-              <h1 className="hero-title">{ja.app.name}</h1>
-              <p className="hero-sub">{t.heroSub}</p>
-            </div>
-            {menu}
-          </header>
-
-          <div className="hero-art">
-            <HomeIllustration className="hero-illustration" />
+    <div
+      ref={viewRef}
+      className={`notes-view ${open ? 'is-sheet-open' : ''} ${sheet.offset !== null ? 'is-dragging' : ''}`}
+      style={{ '--sheet-progress': sheet.progress } as CSSProperties}
+      aria-label={t.heading}
+    >
+      {/* --- The picture ------------------------------------------------- */}
+      <section
+        className="notes-hero"
+        aria-label={ja.app.name}
+        inert={open}
+        {...sheet.pullUp}
+        onWheel={(e) => {
+          if (e.deltaY > 24) setOpen(true);
+        }}
+      >
+        <header className="hero-head">
+          <div className="hero-titles">
+            <h1 className="hero-title">{ja.app.name}</h1>
+            <p className="hero-sub">{t.heroSub}</p>
           </div>
+          {menu}
+        </header>
 
-          <div className="hero-info">
-            <p className="hero-label">{formatLongDate(nowDate)}</p>
-            <div className="hero-figures">
-              <p className="hero-count">
-                {allNotes.length}
-                <span className="hero-count-unit">{t.countUnit}</span>
-              </p>
-              <button type="button" className="hero-box-button" onClick={onShowMap}>
-                <OrbitIcon />
-                {t.showMap}
-              </button>
-            </div>
-            <p className="hero-links">{t.heroLinks(linkTotal)}</p>
-            {latest ? (
-              <button type="button" className="hero-continue" onClick={() => onOpen(latest.id)}>
-                <span className="hero-continue-text">
-                  <span className="hero-continue-label">{t.continue}</span>
-                  <span className="hero-continue-title">{displayTitle(latest)}</span>
-                </span>
-                <ChevronIcon />
-              </button>
-            ) : (
-              <button type="button" className="hero-continue" onClick={onCreate}>
-                <span className="hero-continue-text">
-                  <span className="hero-continue-title">{t.emptyAction}</span>
-                </span>
-                <ChevronIcon />
-              </button>
-            )}
+        <div className="hero-art">
+          <HomeIllustration className="hero-illustration" />
+        </div>
+
+        <div className="hero-info">
+          <p className="hero-label">{formatLongDate(nowDate)}</p>
+          <div className="hero-figures">
+            <p className="hero-count">
+              {allNotes.length}
+              <span className="hero-count-unit">{t.countUnit}</span>
+            </p>
+            <button type="button" className="hero-box-button" onClick={onShowMap}>
+              <OrbitIcon />
+              {t.showMap}
+            </button>
           </div>
-
-          <button type="button" className="hero-reveal" onClick={showList}>
-            {t.reveal}
-            <span className="hero-reveal-chevron" aria-hidden="true">
+          <p className="hero-links">{t.heroLinks(linkTotal)}</p>
+          {latest ? (
+            <button type="button" className="hero-continue" onClick={() => onOpen(latest.id)}>
+              <span className="hero-continue-text">
+                <span className="hero-continue-label">{t.continue}</span>
+                <span className="hero-continue-title">{displayTitle(latest)}</span>
+              </span>
               <ChevronIcon />
-            </span>
-          </button>
-        </section>
+            </button>
+          ) : (
+            <button type="button" className="hero-continue" onClick={onCreate}>
+              <span className="hero-continue-text">
+                <span className="hero-continue-title">{t.emptyAction}</span>
+              </span>
+              <ChevronIcon />
+            </button>
+          )}
+        </div>
 
-        {/* --- After swiping up: the memos, on black ------------------------ */}
-        <section ref={listRef} className="notes-list-section" aria-label={t.listLabel}>
+        <button type="button" className="hero-reveal" onClick={() => setOpen(true)}>
+          {t.reveal}
+          <span className="hero-reveal-chevron" aria-hidden="true">
+            <ChevronIcon />
+          </span>
+        </button>
+      </section>
+
+      {/* --- The sheet that slides up over it: the memos, on black ------- */}
+      <section
+        className={`notes-sheet ${open ? 'is-open' : ''}`}
+        aria-label={t.listLabel}
+        inert={!open && sheet.offset === null}
+        style={sheet.offset !== null ? { transform: `translateY(${sheet.offset}px)` } : undefined}
+      >
+        <div className="sheet-head" {...sheet.pullDown}>
+          <span className="notes-sheet-handle" aria-hidden="true" />
+          <div className="sheet-head-row">
+            <div className="sheet-titles">
+              <p className="sheet-label">{formatLongDate(nowDate)}</p>
+              <h2 className="notes-title">
+                {t.heading}
+                <span className="notes-count">{t.count(allNotes.length)}</span>
+              </h2>
+              <p className="sheet-hint">{t.sheetHint}</p>
+            </div>
+            <div className="sheet-actions">
+              {menu}
+              <button type="button" className="sheet-close" onClick={() => setOpen(false)} aria-label={t.closeList}>
+                <CloseIcon />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div ref={bodyRef} className="sheet-body">
           <div className="notes-inner">
-            <h2 className="notes-title">
-              {t.heading}
-              <span className="notes-count">{t.count(allNotes.length)}</span>
-            </h2>
-
             <label className="notes-search">
               <SearchIcon />
               <input
@@ -376,8 +426,8 @@ export const NotesView = forwardRef<NotesViewHandle, NotesViewProps>(function No
               </div>
             )}
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
   );
 });
