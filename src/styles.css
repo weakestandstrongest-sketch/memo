@@ -3240,3 +3240,8 @@ p {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Inside ひび手帳's sheet (see index.html): no gap for the notch at the top */
+:root.in-frame {
+  --safe-top: 0px;
+}

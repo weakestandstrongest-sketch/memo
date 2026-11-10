@@ -35,6 +35,9 @@
       } catch (e) {
         /* storage blocked: just play the animation */
       }
+      // Opened inside another app (ひび手帳's sheet): the sheet already sits below the status bar,
+      // so the space for the notch at the top would only be an empty gap (the iPhone app gives frames that inset too)
+      if (window.parent !== window) document.documentElement.classList.add('in-frame');
     </script>
     <style>
       /* Opening animation. Plain CSS, so it starts before the app's JavaScript has loaded.
